@@ -1,0 +1,318 @@
+import { API_ENDPOINTS } from "../endpoints";
+import { BaseService, ServiceResponse } from "./base";
+import { CacheInvalidator } from "../cache/cache-invalidator";
+
+export interface VectorDBConfig {
+  db_id: number;
+  db_config: {
+    schema: string;
+    DB_HOST: string;
+    DB_NAME: string;
+    DB_PORT: number;
+    DB_USER: string;
+    [key: string]: any; // Allow other properties
+  };
+  created_at?: string;
+  updated_at: string;
+}
+
+export interface UserTableNamesResponse {
+  table_names: string[];
+}
+
+/**
+ * Service for managing vector database operations
+ * All methods use JWT authentication - user ID is extracted from token on backend
+ */
+export class VectorDBService extends BaseService {
+  protected readonly serviceName = 'VectorDBService';
+
+  /**
+   * Get all available vector database configurations for the authenticated user
+   */
+  async getVectorDBConfigs(): Promise<ServiceResponse<VectorDBConfig[]>> {
+    // Use FMS_DB_CONFIG for vector DB configs
+    const response = await this.get<any>(API_ENDPOINTS.FMS_DB_CONFIG_GET_ALL);
+    
+    // Extract the configs array from the nested response structure
+    const configs = response.data?.configs || [];
+    
+    return {
+      data: configs,
+      success: true,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get available table names for a config
+   * NOTE: Updated to use configId instead of userId - requires configId parameter
+   */
+  async getUserTableNames(configId: number): Promise<ServiceResponse<string[]>> {
+    if (!configId || configId <= 0) {
+      throw this.createValidationError('configId is required and must be positive');
+    }
+    
+    const endpoint = API_ENDPOINTS.FMS_DB_CONFIG_GET_TABLE_NAMES(configId);
+    const response = await this.get<any>(endpoint);
+    
+    // Handle different response structures
+    let tableNames: string[] = [];
+    
+    if (response.data && Array.isArray(response.data)) {
+      tableNames = response.data;
+    } else if (response.data && typeof response.data === 'object') {
+      // Handle the case where response might have table_names property
+      tableNames = response.data.table_names || [];
+    }
+    
+    return {
+      data: tableNames,
+      success: true,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Create vector database access for the authenticated user
+   * User ID is extracted from JWT token on backend
+   */
+  async createVectorDBAccess(request: {
+    vector_db_id: number;
+    accessible_tables: string[];
+    access_level: string;
+  }): Promise<ServiceResponse<any>> {
+    this.validateRequired(request, ['vector_db_id', 'accessible_tables', 'access_level']);
+    this.validateTypes(request, {
+      vector_db_id: 'number',
+      access_level: 'string',
+    });
+
+    if (!Array.isArray(request.accessible_tables)) {
+      throw this.createValidationError('accessible_tables must be an array');
+    }
+
+    if (request.vector_db_id <= 0) {
+      throw this.createValidationError('vector_db_id must be positive');
+    }
+
+    const requestBody = {
+        access_type: "vector_db",
+        vector_db_id: request.vector_db_id,
+        accessible_tables: request.accessible_tables,
+        access_level: request.access_level,
+    };
+
+    // Use FMS_DB_CONFIG for vector DB user configs
+    const result = await this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_SET_USER_CONFIG, requestBody);
+    
+    // Invalidate user-related cache after creating vector DB access
+    if (result.success) {
+      CacheInvalidator.invalidateUsers();
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get user configuration by database ID for the authenticated user
+   * User ID is extracted from JWT token on backend
+   */
+  async getUserConfigByDB(dbId: number): Promise<ServiceResponse<any>> {
+    this.validateRequired({ dbId }, ['dbId']);
+    this.validateTypes({ dbId }, { dbId: 'number' });
+
+    if (dbId <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
+
+    // Use FMS_DB_CONFIG to get user config by database
+    // Note: May need to use FMS_DB_CONFIG_GET_ALL_CONFIGS_FOR_USER or similar
+    return this.get<any>(API_ENDPOINTS.FMS_DB_CONFIG_GET(dbId));
+  }
+
+  /**
+   * Get vector DB configuration by config ID
+   * Returns full config details including db_config with DB_NAME
+   */
+  async getConfigById(configId: number): Promise<ServiceResponse<any>> {
+    this.validateRequired({ configId }, ['configId']);
+    this.validateTypes({ configId }, { configId: 'number' });
+
+    if (configId <= 0) {
+      throw this.createValidationError('Config ID must be positive');
+    }
+
+    return this.get<any>(API_ENDPOINTS.FMS_DB_CONFIG_GET_CONFIG(configId));
+  }
+
+  /**
+   * Add table name for a config
+   * NOTE: Updated to use configId instead of userId - requires configId parameter
+   */
+  async addUserTableName(tableName: string, configId: number): Promise<ServiceResponse<any>> {
+    this.validateRequired({ tableName, configId }, ['tableName', 'configId']);
+    this.validateTypes({ tableName, configId }, { tableName: 'string', configId: 'number' });
+
+    if (tableName.trim().length === 0) {
+      throw this.createValidationError('Table name cannot be empty');
+    }
+
+    if (configId <= 0) {
+      throw this.createValidationError('Config ID must be positive');
+    }
+
+    // Validate table name format
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(tableName)) {
+      throw this.createValidationError('Table name must start with a letter and contain only letters, numbers, and underscores');
+    }
+
+    return this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_APPEND_TABLE_NAME(configId), {
+        table_name: tableName,
+      });
+  }
+
+  /**
+   * Delete table name for a config
+   * NOTE: Updated to use configId instead of userId - requires configId parameter
+   */
+  async deleteUserTableName(tableName: string, configId: number): Promise<ServiceResponse<any>> {
+    this.validateRequired({ tableName, configId }, ['tableName', 'configId']);
+    this.validateTypes({ tableName, configId }, { tableName: 'string', configId: 'number' });
+
+    if (tableName.trim().length === 0) {
+      throw this.createValidationError('Table name cannot be empty');
+    }
+
+    if (configId <= 0) {
+      throw this.createValidationError('Config ID must be positive');
+    }
+
+    const result = await this.delete<any>(API_ENDPOINTS.FMS_DB_CONFIG_DELETE_TABLE_NAME(configId, tableName));
+    
+    // Invalidate user-related cache after deleting table name
+    if (result.success) {
+      CacheInvalidator.invalidateUsers();
+    }
+    
+    return result;
+  }
+
+  /**
+   * Bulk add multiple table names
+   * NOTE: Updated to use configId instead of userId
+   */
+  async addMultipleTableNames(tableNames: string[], configId: number): Promise<ServiceResponse<{
+    successful: string[];
+    failed: Array<{ tableName: string; error: string }>;
+  }>> {
+    this.validateRequired({ tableNames, configId }, ['tableNames', 'configId']);
+
+    if (!Array.isArray(tableNames)) {
+      throw this.createValidationError('tableNames must be an array');
+    }
+
+    if (tableNames.length === 0) {
+      throw this.createValidationError('tableNames array cannot be empty');
+    }
+
+    if (configId <= 0) {
+      throw this.createValidationError('Config ID must be positive');
+    }
+
+    const results = await Promise.allSettled(
+      tableNames.map(tableName => this.addUserTableName(tableName, configId))
+    );
+
+    const successful: string[] = [];
+    const failed: Array<{ tableName: string; error: string }> = [];
+
+    results.forEach((result, index) => {
+      const tableName = tableNames[index];
+      if (result.status === 'fulfilled') {
+        successful.push(tableName);
+      } else {
+        failed.push({
+          tableName,
+          error: result.reason?.message || 'Unknown error',
+        });
+      }
+    });
+
+    return {
+      data: { successful, failed },
+      success: true,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get user table names with metadata
+   * NOTE: Updated to use configId instead of userId
+   */
+  async getUserTableNamesWithMetadata(configId: number): Promise<ServiceResponse<{
+    tableNames: string[];
+    count: number;
+    lastUpdated: string;
+  }>> {
+    if (!configId || configId <= 0) {
+      throw this.createValidationError('configId is required and must be positive');
+    }
+    
+    const response = await this.getUserTableNames(configId);
+    
+    return {
+      data: {
+        tableNames: response.data,
+        count: response.data.length,
+        lastUpdated: new Date().toISOString(),
+      },
+      success: true,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Validate table name format
+   */
+  validateTableName(tableName: string): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    if (!tableName || typeof tableName !== 'string') {
+      errors.push('Table name must be a string');
+      return { isValid: false, errors };
+    }
+
+    if (tableName.trim().length === 0) {
+      errors.push('Table name cannot be empty');
+    }
+
+    if (tableName.length > 128) {
+      errors.push('Table name cannot be longer than 128 characters');
+    }
+
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(tableName)) {
+      errors.push('Table name must start with a letter and contain only letters, numbers, and underscores');
+    }
+
+    // Check for reserved keywords
+    const reservedKeywords = ['select', 'insert', 'update', 'delete', 'drop', 'create', 'alter', 'table'];
+    if (reservedKeywords.includes(tableName.toLowerCase())) {
+      errors.push('Table name cannot be a reserved SQL keyword');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+}
+
+// Export singleton instance
+export const vectorDBService = new VectorDBService();
+
+// Export for backward compatibility
+export default vectorDBService; 

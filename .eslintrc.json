@@ -1,0 +1,15 @@
+{
+  "extends": ["next/core-web-vitals"],
+  "rules": {
+    "no-console": "warn",
+    "no-debugger": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts", "**/*.tsx"],
+      "rules": {
+        "no-console": "warn"
+      }
+    }
+  ]
+}
