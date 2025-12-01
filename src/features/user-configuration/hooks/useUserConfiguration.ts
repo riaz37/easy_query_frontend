@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useAuthContext } from '@/components/providers/AuthContextProvider';
 import { useDatabaseContext } from '@/components/providers/DatabaseContextProvider';
-import { useBusinessRulesContext } from '@/components/providers/BusinessRulesContextProvider';
 import { ServiceRegistry } from '@/lib/api';
 import type { DatabaseInfo } from '../types';
 

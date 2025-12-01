@@ -8,7 +8,6 @@ import {
   Database,
   FileText,
   History,
-  Table,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -36,7 +35,6 @@ const navigationItems = [
   { href: '/database-query', icon: Database, label: 'Database Query' },
   { href: '/file-query', icon: FileText, label: 'File Query' },
   { href: '/history', icon: History, label: 'History' },
-  { href: '/tables', icon: Table, label: 'Tables' },
 ];
 
 export function Sidebar() {
