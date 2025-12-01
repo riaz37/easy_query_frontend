@@ -1,6 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
-import { useBusinessRulesContext } from '@/components/providers/BusinessRulesContextProvider';
 import { ServiceRegistry } from '@/lib/api';
 import type { BusinessRulesEditorState } from '../types';
 

@@ -44,7 +44,7 @@ export default function DatabaseQueryPage() {
         // Check if response contains task_id (background query)
         const responseData = response.data as any;
         if (responseData.task_id) {
-          toast.info("Query started in background. Waiting for results...");
+        toast.info("Query started in background. Waiting for results...");
           
           // Poll for background query completion
           const pollResponse = await ServiceRegistry.query.pollBackgroundQuery(responseData.task_id);
