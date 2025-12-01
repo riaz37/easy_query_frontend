@@ -31,13 +31,18 @@ export interface DbQueryParams {
 }
 
 /**
- * Query result data structure
+ * Query result data structure matching API response
  */
 export interface QueryResultData {
-  results: any[];
-  sql_query?: string;
-  query_history?: any[];
-  metadata?: Record<string, any>;
+  sql: string;
+  data: any[];
+  history: Array<{
+    timestamp: string;
+    question: string;
+    query: string;
+    results_summary: string;
+  }>;
+  model_used: string;
 }
 
 /**
@@ -77,6 +82,9 @@ export class QueryService extends BaseService {
     if (params.db_id !== undefined) {
       queryParams.db_id = params.db_id;
     }
+    if (params.userId) {
+      queryParams.user_id = params.userId;
+    }
     if (params.model) {
       queryParams.model = params.model;
     }
@@ -97,13 +105,45 @@ export class QueryService extends BaseService {
       question: params.question,
       model: params.model || 'gemini',
       db_id: params.db_id,
+      user_id: params.userId,
       table_agent_mode: params.table_agent_mode,
       use_column_agent: params.use_column_agent,
       background: params.background
     });
 
     // POST request with empty body, all params in query string
-    return this.post<QueryResultData>(endpoint, {});
+    // If background=true: API returns { status_code: 200, task_id: string }
+    // If background=false: API returns { status_code: 200, payload: { sql, data, history, model_used } }
+    const response = await this.post<{
+      status_code: number;
+      task_id?: string;
+      payload?: QueryResultData;
+    }>(endpoint, {}, {
+      timeout: params.background ? 30000 : 120000, // Shorter timeout for background (just to get task_id)
+    });
+
+    // Handle background query response
+    if (params.background && response.success && response.data?.task_id) {
+      // Return task_id for background processing
+      return {
+        success: true,
+        data: { task_id: response.data.task_id } as any,
+        timestamp: response.timestamp || new Date().toISOString()
+      };
+    }
+
+    // Handle synchronous query response
+    if (response.success && response.data) {
+      // Handle both nested (response.data.payload) and direct (response.data) structures
+      const payload = response.data.payload || response.data;
+      return {
+        success: true,
+        data: payload,
+        timestamp: response.timestamp || new Date().toISOString()
+      };
+    }
+
+    return response as ServiceResponse<QueryResultData>;
   }
 
   /**

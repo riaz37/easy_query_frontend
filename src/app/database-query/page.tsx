@@ -32,16 +32,43 @@ export default function DatabaseQueryPage() {
     setResults(null);
 
     try {
+      // Start background query
       const response = await ServiceRegistry.query.query({
         question: query,
         db_id: selectedDbId,
         userId: user?.user_id,
+        background: true, // Use background processing
       });
 
       if (response.success && response.data) {
-        const data = response.data.results || response.data.data || [];
-        setResults(Array.isArray(data) ? data : [data]);
-        toast.success("Query executed successfully");
+        // Check if response contains task_id (background query)
+        const responseData = response.data as any;
+        if (responseData.task_id) {
+          toast.info("Query started in background. Waiting for results...");
+          
+          // Poll for background query completion
+          const pollResponse = await ServiceRegistry.query.pollBackgroundQuery(responseData.task_id);
+          
+          if (pollResponse.success && pollResponse.data) {
+            const data = pollResponse.data.data || [];
+            setResults(Array.isArray(data) ? data : [data]);
+            toast.success("Query executed successfully");
+          } else {
+            const errorMessage = pollResponse.error || "Query execution failed";
+            setError(errorMessage);
+            toast.error(errorMessage);
+          }
+        } else if (responseData.data) {
+          // Direct response (synchronous) - data is in response.data.data
+          const data = responseData.data || [];
+          setResults(Array.isArray(data) ? data : [data]);
+          toast.success("Query executed successfully");
+        } else {
+          // Fallback: try to extract data from any structure
+          const data = responseData.results || responseData.data || [];
+          setResults(Array.isArray(data) ? data : [data]);
+          toast.success("Query executed successfully");
+        }
       } else {
         const errorMessage = response.error || "Query execution failed";
         setError(errorMessage);
