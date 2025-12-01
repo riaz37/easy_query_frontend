@@ -10,7 +10,7 @@ export { ReportStructureTab } from './tabs/report-structure/ReportStructureTab';
 // Individual components
 export { UserInfoCard, CurrentStatusCard, QuickActionsCard } from './tabs/overview/components';
 export { DatabaseSelectionCard, DatabaseCard } from './tabs/database/components';
-export { BusinessRulesStatusCard, BusinessRulesEditor, ContextInfoCard, BusinessLogicModal } from './tabs/business-rules/components';
+export { BusinessRulesEditor } from './tabs/business-rules/components';
 
 // Hooks
 export { useUserConfiguration } from './hooks/useUserConfiguration';

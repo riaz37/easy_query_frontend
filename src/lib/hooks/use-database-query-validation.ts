@@ -1,18 +1,13 @@
 import { useState, useCallback } from 'react';
 import { BusinessRulesValidator, BusinessRuleValidation } from '@/lib/utils/business-rules-validator';
-import { useBusinessRulesContext } from '@/components/providers';
 
 /**
  * Hook for validating database queries against business rules
- * Now uses the Business Rules context for better state management
  */
-export function useDatabaseQueryValidation() {
+export function useDatabaseQueryValidation(businessRules?: string) {
   const [validationResult, setValidationResult] = useState<BusinessRuleValidation | null>(null);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
-
-  // Use the business rules context
-  const { businessRules, validateQuery } = useBusinessRulesContext();
 
   /**
    * Validate a database query against business rules
@@ -25,8 +20,11 @@ export function useDatabaseQueryValidation() {
     setValidationResult(null);
 
     try {
-      // Use the context's validateQuery method
-      const validation = validateQuery(query);
+      // Validate query using BusinessRulesValidator
+      const validation = BusinessRulesValidator.validateQuery(
+        query,
+        businessRules || ''
+      );
       
       setValidationResult(validation);
       return validation;
@@ -47,7 +45,7 @@ export function useDatabaseQueryValidation() {
     } finally {
       setIsValidating(false);
     }
-  }, [validateQuery]);
+  }, [businessRules]);
 
   /**
    * Clear validation results
@@ -61,13 +59,13 @@ export function useDatabaseQueryValidation() {
    * Check if query can be executed
    */
   const canExecuteQuery = useCallback((query: string): boolean => {
-    if (!businessRules.content || businessRules.status !== 'loaded') {
+    if (!businessRules || !businessRules.trim()) {
       return true; // Allow execution if no business rules are configured
     }
 
-    const validation = validateQuery(query);
+    const validation = BusinessRulesValidator.validateQuery(query, businessRules);
     return validation.isValid;
-  }, [businessRules, validateQuery]);
+  }, [businessRules]);
 
   /**
    * Get validation status for a query
@@ -78,7 +76,7 @@ export function useDatabaseQueryValidation() {
     warnings: string[];
     suggestions: string[];
   } => {
-    if (!businessRules.content || businessRules.status !== 'loaded') {
+    if (!businessRules || !businessRules.trim()) {
       return {
         isValid: true,
         errors: [],
@@ -87,8 +85,8 @@ export function useDatabaseQueryValidation() {
       };
     }
 
-    return validateQuery(query);
-  }, [businessRules, validateQuery]);
+    return BusinessRulesValidator.validateQuery(query, businessRules);
+  }, [businessRules]);
 
   return {
     // State
@@ -104,8 +102,7 @@ export function useDatabaseQueryValidation() {
     canExecuteQuery,
     getValidationStatus,
     
-    // Context state
-    businessRulesStatus: businessRules.status,
-    hasBusinessRules: businessRules.status === 'loaded' && !!businessRules.content
+    // State
+    hasBusinessRules: !!businessRules && !!businessRules.trim()
   };
 } 

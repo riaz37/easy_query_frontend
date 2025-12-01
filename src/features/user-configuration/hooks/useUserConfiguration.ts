@@ -16,18 +16,11 @@ export const useUserConfiguration = () => {
     setError: setDatabaseError,
     availableDatabases,
   } = useDatabaseContext();
-  const {
-    businessRules,
-    isLoading: businessRulesLoading,
-    loadBusinessRulesFromConfig,
-    updateBusinessRules,
-    refreshBusinessRules,
-    hasBusinessRules,
-    businessRulesCount,
-    setLoading: setBusinessRulesLoading,
-    setError: setBusinessRulesError,
-    clearBusinessRulesOnDatabaseChange,
-  } = useBusinessRulesContext();
+
+  // Business rules state
+  const [businessRules, setBusinessRules] = useState<string>('');
+  const [businessRulesLoading, setBusinessRulesLoading] = useState(false);
+  const [businessRulesError, setBusinessRulesError] = useState<string | null>(null);
 
   // Report structure state
   const [reportStructure, setReportStructure] = useState<string>('');
@@ -119,20 +112,20 @@ export const useUserConfiguration = () => {
               );
             
             if (businessRulesResponse.success && businessRulesResponse.data) {
-              loadBusinessRulesFromConfig(businessRulesResponse.data.businessRule);
-              setReportStructure(businessRulesResponse.data.reportStructure);
+              setBusinessRules(businessRulesResponse.data.businessRule || '');
+              setReportStructure(businessRulesResponse.data.reportStructure || '');
             } else {
-              loadBusinessRulesFromConfig('');
+              setBusinessRules('');
               setReportStructure('');
             }
           } catch (error) {
             console.warn('Failed to load business rules and report structure:', error);
-            loadBusinessRulesFromConfig('');
+            setBusinessRules('');
             setReportStructure('');
           }
         } else {
           // No current database set
-          loadBusinessRulesFromConfig('');
+          setBusinessRules('');
           setReportStructure('');
         }
       } else {
@@ -154,12 +147,8 @@ export const useUserConfiguration = () => {
   }, [
     user?.user_id,
     setCurrentDatabase,
-    loadBusinessRulesFromConfig,
     loadDatabasesFromConfig,
     setDatabaseLoading,
-    setBusinessRulesLoading,
-    setDatabaseError,
-    setBusinessRulesError,
     currentDatabaseId,
     availableDatabases,
   ]);
@@ -221,7 +210,8 @@ export const useUserConfiguration = () => {
 
           if (response.success) {
             // Clear business rules and report structure first to ensure fresh data
-            clearBusinessRulesOnDatabaseChange();
+            setBusinessRules('');
+            setBusinessRulesError(null);
             clearReportStructureOnDatabaseChange();
             
             // Update database context provider
@@ -243,15 +233,15 @@ export const useUserConfiguration = () => {
                 );
               
               if (businessRulesResponse.success && businessRulesResponse.data) {
-                loadBusinessRulesFromConfig(businessRulesResponse.data.businessRule);
-                setReportStructure(businessRulesResponse.data.reportStructure);
+                setBusinessRules(businessRulesResponse.data.businessRule || '');
+                setReportStructure(businessRulesResponse.data.reportStructure || '');
               } else {
-                loadBusinessRulesFromConfig('');
+                setBusinessRules('');
                 setReportStructure('');
               }
             } catch (error) {
               console.warn('Failed to load business rules and report structure for new database:', error);
-              loadBusinessRulesFromConfig('');
+              setBusinessRules('');
               setReportStructure('');
             }
 
@@ -275,7 +265,6 @@ export const useUserConfiguration = () => {
       databases,
       user?.user_id,
       setCurrentDatabase,
-      loadBusinessRulesFromConfig,
       setDatabaseLoading,
       setDatabaseError,
     ],
@@ -294,10 +283,10 @@ export const useUserConfiguration = () => {
           );
         
         if (businessRulesResponse.success && businessRulesResponse.data) {
-          loadBusinessRulesFromConfig(businessRulesResponse.data.businessRule);
+          setBusinessRules(businessRulesResponse.data.businessRule || '');
           toast.success('Business rules refreshed successfully');
         } else {
-          loadBusinessRulesFromConfig('');
+          setBusinessRules('');
           toast.success('Business rules refreshed (no rules found)');
         }
       } else {
@@ -313,12 +302,7 @@ export const useUserConfiguration = () => {
     } finally {
       setBusinessRulesLoading(false);
     }
-  }, [
-    currentDatabaseId,
-    setBusinessRulesLoading,
-    setBusinessRulesError,
-    loadBusinessRulesFromConfig,
-  ]);
+  }, [currentDatabaseId]);
 
   // Handle report structure refresh
   const handleReportStructureRefresh = useCallback(async () => {
@@ -352,11 +336,30 @@ export const useUserConfiguration = () => {
     } finally {
       setReportStructureLoading(false);
     }
-  }, [
-    currentDatabaseId,
-    setReportStructureLoading,
-    setReportStructureError,
-  ]);
+  }, [currentDatabaseId]);
+
+  // Computed values
+  const hasBusinessRules = useMemo(() => !!businessRules.trim(), [businessRules]);
+  const businessRulesCount = useMemo(() => {
+    if (!businessRules.trim()) return 0;
+    return businessRules.split('\n').filter(line => line.trim().length > 0).length;
+  }, [businessRules]);
+
+  // Business rules helpers
+  const loadBusinessRulesFromConfig = useCallback((rules: string) => {
+    setBusinessRules(rules || '');
+    setBusinessRulesError(null);
+  }, []);
+
+  const updateBusinessRules = useCallback((rules: string) => {
+    setBusinessRules(rules || '');
+    setBusinessRulesError(null);
+  }, []);
+
+  const clearBusinessRulesOnDatabaseChange = useCallback(() => {
+    setBusinessRules('');
+    setBusinessRulesError(null);
+  }, []);
 
   // Memoize the return object to prevent unnecessary re-renders
   return useMemo(() => ({
@@ -369,6 +372,7 @@ export const useUserConfiguration = () => {
     currentDatabaseName,
     businessRules,
     businessRulesLoading,
+    businessRulesError,
     hasBusinessRules,
     businessRulesCount,
     reportStructure,
@@ -381,7 +385,12 @@ export const useUserConfiguration = () => {
     handleDatabaseChange,
     handleBusinessRulesRefresh,
     handleReportStructureRefresh,
+    loadBusinessRulesFromConfig,
+    updateBusinessRules,
+    clearBusinessRulesOnDatabaseChange,
     clearReportStructureOnDatabaseChange,
+    setBusinessRulesLoading,
+    setBusinessRulesError,
   }), [
     loading,
     databases,
@@ -391,6 +400,7 @@ export const useUserConfiguration = () => {
     currentDatabaseName,
     businessRules,
     businessRulesLoading,
+    businessRulesError,
     hasBusinessRules,
     businessRulesCount,
     reportStructure,
@@ -401,6 +411,9 @@ export const useUserConfiguration = () => {
     handleDatabaseChange,
     handleBusinessRulesRefresh,
     handleReportStructureRefresh,
+    loadBusinessRulesFromConfig,
+    updateBusinessRules,
+    clearBusinessRulesOnDatabaseChange,
     clearReportStructureOnDatabaseChange,
   ]);
 };

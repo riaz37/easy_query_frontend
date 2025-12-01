@@ -71,6 +71,7 @@ export const UserConfiguration = React.memo<UserConfigurationProps>(
       handleDatabaseChange,
       handleBusinessRulesRefresh,
       handleReportStructureRefresh,
+      updateBusinessRules,
     } = useUserConfiguration();
 
     const {
@@ -81,8 +82,9 @@ export const UserConfiguration = React.memo<UserConfigurationProps>(
       handleRulesContentChange,
     } = useBusinessRulesEditor({
       currentDatabaseId,
-      businessRulesContent: businessRules.content,
+      businessRulesContent: businessRules,
       onRefresh: handleManualRefresh,
+      onUpdate: updateBusinessRules,
     });
 
     if (!isAuthenticated) {

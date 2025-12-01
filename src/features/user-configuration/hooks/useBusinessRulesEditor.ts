@@ -7,14 +7,17 @@ interface UseBusinessRulesEditorProps {
   currentDatabaseId?: number;
   businessRulesContent: string;
   onRefresh: () => void;
+  onUpdate?: (rules: string) => void;
 }
 
 export const useBusinessRulesEditor = ({
   currentDatabaseId,
   businessRulesContent,
   onRefresh,
+  onUpdate,
 }: UseBusinessRulesEditorProps) => {
-  const { updateBusinessRules, setLoading: setBusinessRulesLoading, setError: setBusinessRulesError } = useBusinessRulesContext();
+  const [businessRulesLoading, setBusinessRulesLoading] = useState(false);
+  const [businessRulesError, setBusinessRulesError] = useState<string | null>(null);
 
   // Business rules editing state
   const [editorState, setEditorState] = useState<BusinessRulesEditorState>({
@@ -75,8 +78,10 @@ export const useBusinessRulesEditor = ({
       );
 
       if (response.success) {
-        // Update business rules context
-        updateBusinessRules(editorState.editedContent);
+        // Update business rules if callback provided
+        if (onUpdate) {
+          onUpdate(editorState.editedContent);
+        }
 
         // Reset editing state
         setEditorState({
