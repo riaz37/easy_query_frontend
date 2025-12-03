@@ -1,382 +1,511 @@
-"use client";
+import React, { useState, useCallback, useRef } from 'react';
+// Card components removed - now handled by parent component
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Upload, File, X, CheckCircle, AlertCircle, Database } from 'lucide-react';
+import { Spinner } from '@/components/ui/loading';
+import { toast } from 'sonner';
+import { ServiceRegistry } from '@/lib/api/services/service-registry';
+import { useAuthContext } from '@/components/providers/AuthContextProvider';
 
-import React, { useState, useCallback, useEffect, useRef } from "react";
-import { useDropzone } from "react-dropzone";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Upload, X, CheckCircle2, AlertCircle, Loader2, File } from "lucide-react";
-import { fileService } from "@/lib/api/services/file-service";
-import { toast } from "sonner";
-import { useFileConfigContext } from "@/components/providers";
-
-interface UploadedFile {
+export interface UploadedFile {
   id: string;
   file: File;
-  status: "pending" | "uploading" | "processing" | "completed" | "failed";
+  status: 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
   progress: number;
   bundleId?: string;
   error?: string;
 }
 
-export function FileUpload() {
-  const { currentConfigId } = useFileConfigContext();
+interface FileUploadProps {
+  onFilesUploaded: (fileIds: string[]) => void;
+  onUploadStatusChange: (files: UploadedFile[]) => void;
+  onTableUsageChange?: (useTable: boolean) => void;
+  disabled?: boolean;
+  className?: string;
+}
+
+export function FileUpload({ 
+  onFilesUploaded, 
+  onUploadStatusChange, 
+  onTableUsageChange,
+  disabled = false,
+  className = "" 
+}: FileUploadProps) {
+  const { user } = useAuthContext();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [pollingIntervals, setPollingIntervals] = useState<Record<string, NodeJS.Timeout>>({});
+  const [useTable, setUseTable] = useState(true); // Default to using tables
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
-      if (acceptedFiles.length === 0) return;
+  // Handle file selection
+  const handleFileSelect = useCallback((files: FileList | null) => {
+    if (!files || files.length === 0) return;
 
-      if (!currentConfigId) {
-        toast.error("Please select a file config first");
-        return;
+    const newFiles: UploadedFile[] = Array.from(files).map(file => ({
+      id: `${Date.now()}-${Math.random()}`,
+      file,
+      status: 'pending',
+      progress: 0,
+    }));
+
+    console.log('Adding new files:', newFiles.map(f => ({ name: f.file.name, id: f.id, status: f.status })));
+    
+    setUploadedFiles(prev => {
+      const updated = [...prev, ...newFiles];
+      console.log('Updated uploadedFiles state after selection:', updated.map(f => ({ name: f.file.name, id: f.id, status: f.status })));
+      return updated;
+    });
+    
+    // Don't call onUploadStatusChange here - it will be called when files are actually uploaded
+  }, []);
+
+  // Upload files to the API
+  const uploadFiles = useCallback(async (files: UploadedFile[]) => {
+    if (files.length === 0) return;
+
+    setIsUploading(true);
+    
+    try {
+      // Generate descriptions and table names
+      const fileDescriptions = files.map(uploadFile => `Uploaded file: ${uploadFile.file.name}`);
+      const tableNames = useTable ? files.map(uploadFile => `file_${uploadFile.file.name.replace(/[^a-zA-Z0-9]/g, '_')}`) : [];
+
+      // Check if user is authenticated
+      if (!user?.user_id) {
+        throw new Error('User not authenticated. Please log in again.');
       }
 
-      setIsUploading(true);
+      // Upload files using the new fast upload API
+      const uploadResponse = await ServiceRegistry.file.uploadFilesFastBackground({
+        files: files.map(uploadFile => uploadFile.file),
+        file_descriptions: fileDescriptions,
+        table_names: tableNames,
+        user_ids: user.user_id,
+      });
 
-      // Create initial file entries
-      const newFiles: UploadedFile[] = acceptedFiles.map((file) => ({
-        id: `${Date.now()}-${Math.random()}`,
-        file,
-        status: "pending",
-        progress: 0,
-      }));
-
-      setUploadedFiles((prev) => [...prev, ...newFiles]);
-
-      try {
-        // Generate descriptions
-        const fileDescriptions = acceptedFiles.map(
-          (file) => `Uploaded file: ${file.name}`
-        );
-
-        // Upload files
-        const uploadResponse = await fileService.uploadToSmartFileSystem({
-          files: acceptedFiles,
-          file_descriptions: fileDescriptions,
-          table_names: [],
-          config_ids: currentConfigId,
-        });
-
-        if (uploadResponse.success && uploadResponse.data) {
-          const bundleId = uploadResponse.data.bundle_id;
-
-          // Update files with bundle ID
-          setUploadedFiles((prev) =>
-            prev.map((uploadFile) => {
-              const matchingFile = newFiles.find((f) => f.id === uploadFile.id);
-              if (matchingFile) {
-                return {
-                  ...uploadFile,
-                  bundleId,
-                  status: "processing",
-                  progress: 10,
-                };
-              }
-              return uploadFile;
-            })
-          );
-
-          // Start polling for status
-          startPolling(bundleId, newFiles);
-
-          toast.success(`Files uploaded successfully! Processing...`);
-        } else {
-          throw new Error(uploadResponse.error || "File upload failed");
-        }
-      } catch (error: any) {
-        console.error("File upload error:", error);
-        toast.error(error.message || "Failed to upload files");
-
-        // Mark files as failed
-        setUploadedFiles((prev) =>
-          prev.map((uploadFile) => {
-            const matchingFile = newFiles.find((f) => f.id === uploadFile.id);
+      if (uploadResponse.success && uploadResponse.data) {
+        const bundleId = uploadResponse.data.bundle_id;
+        
+        // Update files with bundle ID and start polling
+        setUploadedFiles(prev => {
+          const updated = prev.map(uploadFile => {
+            const matchingFile = files.find(f => f.id === uploadFile.id);
             if (matchingFile) {
+              console.log(`Updating file ${uploadFile.file.name} with bundle ID ${bundleId} and status processing`);
               return {
                 ...uploadFile,
-                status: "failed",
-                error: error.message || "Upload failed",
+                bundleId,
+                status: 'processing' as const,
+                progress: 0,
               };
             }
             return uploadFile;
-          })
-        );
-      } finally {
-        setIsUploading(false);
+          });
+          console.log('Updated uploadedFiles state:', updated);
+          return updated;
+        });
+
+        // Start progress polling
+        startProgressPolling(bundleId);
+        
+        console.log(`Started progress polling for bundle: ${bundleId}`);
+        toast.success(`Files uploaded successfully! Bundle ID: ${bundleId}`);
+      } else {
+        throw new Error(uploadResponse.error || 'File upload failed');
       }
-    },
-    [currentConfigId]
-  );
+    } catch (error) {
+      console.error('File upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'File upload failed';
+      toast.error(`Upload failed: ${errorMessage}`);
+      
+      // Mark files as failed
+      setUploadedFiles(prev => prev.map(uploadFile => {
+        const matchingFile = files.find(f => f.id === uploadFile.id);
+        if (matchingFile) {
+          return {
+            ...uploadFile,
+            status: 'failed' as const,
+            error: errorMessage,
+          };
+        }
+        return uploadFile;
+      }));
+    } finally {
+      setIsUploading(false);
+    }
+  }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "application/pdf": [".pdf"],
-      "application/msword": [".doc"],
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
-        ".docx",
-      ],
-      "application/vnd.ms-excel": [".xls"],
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
-        ".xlsx",
-      ],
-      "text/plain": [".txt"],
-      "text/csv": [".csv"],
-      "application/json": [".json"],
-    },
-    maxSize: 50 * 1024 * 1024, // 50MB
-    disabled: !currentConfigId || isUploading,
-  });
-
-  const startPolling = useCallback(
-    (bundleId: string, files: UploadedFile[]) => {
-      // Clear any existing polling
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-
-      let pollCount = 0;
-      const maxPolls = 300; // 5 minutes with 1 second intervals
-
-      pollingIntervalRef.current = setInterval(async () => {
-        pollCount++;
-
-        try {
-          const statusResponse = await fileService.getBundleTaskStatus(bundleId);
-
-          if (statusResponse.success && statusResponse.data) {
-            // Handle response structure - API returns data directly or nested
-            const status = statusResponse.data?.data || statusResponse.data;
+  // Start progress polling for a bundle
+  const startProgressPolling = useCallback((bundleId: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const statusResponse = await ServiceRegistry.file.getFastBundleResult(bundleId);
+        
+        if (statusResponse.success && statusResponse.data?.bundle) {
+          // The API returns { status_code: 200, bundle: {...} }
+          const bundle = statusResponse.data.bundle;
+          
+          console.log('Progress update for bundle:', bundleId, 'status:', bundle);
+          
+          // Calculate average progress for all files in the bundle
+          const overallProgress = bundle.progress_percentage || 0;
+          
+          // Update progress for each file using current state
+          setUploadedFiles(prev => prev.map(uploadFile => {
+            if (uploadFile.bundleId !== bundleId) return uploadFile;
             
-            // Check bundle-level status (case-insensitive)
-            const bundleStatus = (status.status || "").toUpperCase();
-            const isCompleted = bundleStatus === "COMPLETED";
-            const isFailed = bundleStatus === "FAILED";
-
-            // Update progress based on bundle status and individual tasks
-            setUploadedFiles((prev) =>
-              prev.map((uploadFile) => {
-                const matchingFile = files.find((f) => f.id === uploadFile.id);
-                if (matchingFile && uploadFile.bundleId === bundleId) {
-                  // If bundle is completed, mark all files as completed
-                  if (isCompleted) {
-                    return {
-                      ...uploadFile,
-                      status: "completed",
-                      progress: 100,
-                    };
-                  }
-                  
-                  // If bundle is failed, mark as failed
-                  if (isFailed) {
-                    return {
-                      ...uploadFile,
-                      status: "failed",
-                      error: "Bundle processing failed",
-                      progress: 0,
-                    };
-                  }
-
-                  // Try to find corresponding task in individual_tasks
-                  const tasks = status.individual_tasks || [];
-                  const originalFileName = uploadFile.file.name;
-                  const baseFileName = originalFileName.replace(/\.[^/.]+$/, ""); // Remove extension
-                  
-                  const task = tasks.find((t: any) => {
-                    if (!t.filename) return false;
-                    // Match by exact filename
-                    if (t.filename === originalFileName) return true;
-                    // Match by base name (filename might be modified by API)
-                    if (t.filename.includes(baseFileName) || baseFileName.includes(t.filename.split('_')[0])) return true;
-                    // Match by checking if original filename is contained in API filename
-                    const apiBaseName = t.filename.split('_')[0];
-                    return apiBaseName && originalFileName.includes(apiBaseName);
-                  });
-
-                  if (task) {
-                    const taskStatus = (task.status || "").toLowerCase();
-                    if (taskStatus === "completed") {
-                      return {
-                        ...uploadFile,
-                        status: "completed",
-                        progress: 100,
-                      };
-                    } else if (taskStatus === "failed") {
-                      return {
-                        ...uploadFile,
-                        status: "failed",
-                        error: task.error_message || "Processing failed",
-                        progress: 0,
-                      };
-                    }
-                  }
-                  
-                  // If no task found but bundle is processing, show processing status
+            let newStatus: UploadedFile['status'] = 'processing';
+            let progress = overallProgress;
+            
+            // Handle different status values from API (case-insensitive)
+            const bundleStatus = bundle.status?.toLowerCase();
+            console.log(`Bundle status: ${bundleStatus}, progress: ${overallProgress}%`);
+            
+            if (bundleStatus === 'completed') {
+              newStatus = 'completed';
+              progress = 100;
+            } else if (bundleStatus === 'failed') {
+              newStatus = 'failed';
+              progress = 0;
+            } else if (bundleStatus === 'pending' || bundleStatus === 'processing') {
+              newStatus = 'processing';
+            }
+            
+            console.log(`Updating file ${uploadFile.file.name} to status: ${newStatus}, progress: ${progress}%`);
+            
+            return {
+              ...uploadFile,
+              status: newStatus,
+              progress,
+            };
+          }));
+          
+          // Check if all files are completed (handle both uppercase and lowercase status)
+          const bundleStatus = bundle.status?.toLowerCase();
+          if (bundleStatus === 'completed' || bundleStatus === 'failed') {
+            console.log(`Bundle ${bundleId} completed with status: ${bundleStatus}`);
+            clearInterval(pollInterval);
+            
+            // Clean up interval
+            setPollingIntervals(prev => {
+              const newIntervals = { ...prev };
+              delete newIntervals[bundleId];
+              return newIntervals;
+            });
+            
+            // Update parent component with current state
+            setUploadedFiles(currentFiles => {
+              const updatedFiles = currentFiles.map(uploadFile => {
+                if (uploadFile.bundleId === bundleId) {
+                  const isCompleted = bundleStatus === 'completed' || bundleStatus === 'success';
                   return {
                     ...uploadFile,
-                    status: "processing",
-                    progress: Math.min(90, status.progress_percentage || 0),
+                    status: isCompleted ? 'completed' : 'failed',
+                    progress: isCompleted ? 100 : 0,
                   };
                 }
                 return uploadFile;
-              })
-            );
-
-            // Stop polling if bundle is completed or failed
-            if (isCompleted || isFailed || pollCount >= maxPolls) {
-              if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-                pollingIntervalRef.current = null;
-              }
-
-              if (isCompleted) {
-                toast.success(`All files processed successfully! (${status.completed_files || 0} files)`);
-              } else if (isFailed) {
-                toast.error(`Some files failed to process (${status.failed_files || 0} failed)`);
-              }
+              });
+              
+              return updatedFiles;
+            });
+            
+            if (bundleStatus === 'completed') {
+              toast.success(`All files processed successfully! Total: ${bundle.completed_files}`);
+            } else {
+              toast.error(`Some files failed to process. Completed: ${bundle.completed_files}, Failed: ${bundle.failed_files}`);
             }
           }
-        } catch (error) {
-          console.error("Error polling bundle status:", error);
-          if (pollCount >= maxPolls) {
-            if (pollingIntervalRef.current) {
-              clearInterval(pollingIntervalRef.current);
-              pollingIntervalRef.current = null;
-            }
-          }
+        } else {
+          console.error('Failed to get bundle status:', statusResponse.error);
         }
-      }, 1000); // Poll every second
-    },
-    []
-  );
-
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
+      } catch (error) {
+        console.error('Progress polling error:', error);
+        // Don't stop polling on error, just log it
       }
+    }, 2000); // Poll every 2 seconds
+    
+    // Store interval for cleanup
+    setPollingIntervals(prev => ({
+      ...prev,
+      [bundleId]: pollInterval
+    }));
+  }, [onUploadStatusChange]);
+
+  // Remove file
+  const removeFile = useCallback((fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+    
+    // Clean up any polling intervals for this file
+    const file = uploadedFiles.find(f => f.id === fileId);
+    if (file?.bundleId && pollingIntervals[file.bundleId]) {
+      clearInterval(pollingIntervals[file.bundleId]);
+      setPollingIntervals(prev => {
+        const newIntervals = { ...prev };
+        delete newIntervals[file.bundleId!];
+        return newIntervals;
+      });
+    }
+  }, [uploadedFiles, pollingIntervals]);
+
+  // Clear all files
+  const clearAllFiles = useCallback(() => {
+    // Clear all polling intervals
+    Object.values(pollingIntervals).forEach(interval => clearInterval(interval));
+    setPollingIntervals({});
+    setUploadedFiles([]);
+    onUploadStatusChange([]);
+  }, [pollingIntervals, onUploadStatusChange]);
+
+  // Cleanup effect to clear intervals on unmount
+  React.useEffect(() => {
+    return () => {
+      // Clear all polling intervals when component unmounts
+      Object.values(pollingIntervals).forEach(interval => clearInterval(interval));
     };
+  }, [pollingIntervals]);
+
+  // Sync with parent component when uploadedFiles changes
+  React.useEffect(() => {
+    if (uploadedFiles.length > 0) {
+      onUploadStatusChange(uploadedFiles);
+    }
+  }, [uploadedFiles, onUploadStatusChange]);
+
+  // Notify parent when table usage changes
+  React.useEffect(() => {
+    console.log('FileUpload: useTable changed to:', useTable, 'onTableUsageChange exists:', !!onTableUsageChange);
+    if (onTableUsageChange && typeof onTableUsageChange === 'function') {
+      try {
+        onTableUsageChange(useTable);
+      } catch (error) {
+        console.error('Error calling onTableUsageChange:', error);
+      }
+    }
+  }, [useTable, onTableUsageChange]);
+
+  // Get status icon
+  const getStatusIcon = (status: UploadedFile['status']) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-600" />;
+      case 'failed':
+        return <AlertCircle className="w-4 h-4 text-red-600" />;
+      case 'processing':
+        return <Spinner size="sm" variant="accent-green" />;
+      case 'uploading':
+        return <Spinner size="sm" variant="accent-green" />;
+      default:
+        return <File className="w-4 h-4 text-gray-600" />;
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status: UploadedFile['status']) => {
+    switch (status) {
+      case 'completed':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200';
+      case 'failed':
+        return 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200';
+      case 'processing':
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200';
+      case 'uploading':
+        return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-200';
+    }
+  };
+
+  // Handle drag and drop
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.add('border-emerald-500', 'bg-emerald-50');
   }, []);
 
-  const removeFile = (id: string) => {
-    setUploadedFiles((prev) => prev.filter((f) => f.id !== id));
-  };
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-emerald-500', 'bg-emerald-50');
+  }, []);
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + " " + sizes[i];
-  };
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-emerald-500', 'bg-emerald-50');
+    handleFileSelect(e.dataTransfer.files);
+  }, [handleFileSelect]);
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5" />
-            Upload Files
-          </CardTitle>
-          <CardDescription>
-            Upload files to query. Supported formats: PDF, Word, Excel, TXT, CSV, JSON (max 50MB)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div
-            {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-              isDragActive
-                ? "border-primary bg-primary/10"
-                : "border-muted-foreground/25 hover:border-muted-foreground/50"
-            } ${!currentConfigId || isUploading ? "opacity-50 cursor-not-allowed" : ""}`}
+    <div className={className}>
+      {/* Header with status */}
+      {uploadedFiles.length > 0 && (
+        <div className="flex items-center justify-between mb-4">
+          <Badge variant="outline" className="border-emerald-400/30 text-emerald-400">
+            {uploadedFiles.filter(f => f.status === 'completed').length} / {uploadedFiles.length} Complete
+          </Badge>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={clearAllFiles}
+            disabled={isUploading}
+            className="border-red-400/30 text-red-400 hover:bg-red-400/10"
           >
-            <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-4">
-              {isDragActive ? (
-                <>
-                  <Upload className="h-12 w-12 text-primary" />
-                  <p className="text-lg font-medium">Drop files here</p>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-12 w-12 text-muted-foreground" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Drag and drop files here, or click to select
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {!currentConfigId
-                        ? "Please select a file config first"
-                        : "Select one or more files to upload"}
-                    </p>
-                  </div>
-                </>
-              )}
+            Clear All
+          </Button>
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {/* Table Usage Toggle */}
+        <div className="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg border border-gray-600/30">
+          <div className="flex items-center gap-3">
+            <Database className="w-5 h-5 text-emerald-400" />
+            <div>
+              <Label htmlFor="use-table" className="text-sm font-medium text-white">
+                Use Table Names
+              </Label>
+              <p className="text-xs text-gray-400">
+                {useTable ? 'Files will be associated with table names' : 'Files will be processed without table names'}
+              </p>
             </div>
           </div>
+          <Switch
+            id="use-table"
+            checked={useTable}
+            onCheckedChange={setUseTable}
+            disabled={isUploading}
+          />
+        </div>
 
-          {uploadedFiles.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Uploaded Files</h4>
-              <div className="space-y-2">
-                {uploadedFiles.map((uploadedFile) => (
-                  <div
-                    key={uploadedFile.id}
-                    className="border rounded-lg p-4 space-y-2"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="text-sm font-medium truncate">
-                          {uploadedFile.file.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          ({formatFileSize(uploadedFile.file.size)})
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {uploadedFile.status === "completed" && (
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        )}
-                        {uploadedFile.status === "failed" && (
-                          <AlertCircle className="h-5 w-5 text-red-500" />
-                        )}
-                        {uploadedFile.status === "processing" && (
-                          <Loader2 className="h-5 w-5 text-blue-500 animate-spin" />
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(uploadedFile.id)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    {(uploadedFile.status === "processing" ||
-                      uploadedFile.status === "uploading") && (
-                      <Progress value={uploadedFile.progress} className="h-2" />
-                    )}
-                    {uploadedFile.status === "failed" && uploadedFile.error && (
-                      <p className="text-xs text-red-500">{uploadedFile.error}</p>
-                    )}
-                    {uploadedFile.status === "completed" && (
-                      <p className="text-xs text-green-500">Processing completed</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+        {/* File Drop Zone */}
+        <div
+          className={`border-2 border-dashed border-gray-600/50 rounded-lg p-6 text-center transition-colors ${
+            disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-emerald-400 hover:bg-emerald-900/20'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => !disabled && fileInputRef.current?.click()}
+          data-element="upload-area"
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={(e) => handleFileSelect(e.target.files)}
+            className="hidden"
+            accept=".txt,.pdf,.doc,.docx,.csv,.xlsx,.xls"
+            disabled={disabled || isUploading}
+          />
+          
+          {isUploading ? (
+            <>
+              <Spinner size="lg" variant="accent-green" className="mx-auto mb-4" />
+              <p className="text-lg font-medium text-white">
+                Uploading files...
+              </p>
+              <p className="text-sm text-gray-400">
+                Please wait while your files are being processed
+              </p>
+            </>
+          ) : (
+            <>
+              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <p className="text-lg font-medium text-white">
+                Click to upload files or drag and drop
+              </p>
+              <p className="text-sm text-gray-400">
+                Supports TXT, PDF, DOC, DOCX, CSV, XLSX, XLS
+              </p>
+            </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Upload Button */}
+        {uploadedFiles.length > 0 && !isUploading && (
+          <Button
+            onClick={() => {
+              const pendingFiles = uploadedFiles.filter(f => f.status === 'pending');
+              console.log('Upload button clicked, pending files:', pendingFiles.map(f => ({ name: f.file.name, id: f.id, status: f.status })));
+              uploadFiles(pendingFiles);
+            }}
+            disabled={disabled || uploadedFiles.filter(f => f.status === 'pending').length === 0 || !user?.user_id}
+            className="w-full bg-emerald-600 hover:bg-emerald-700"
+            data-element="upload-button"
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload {uploadedFiles.filter(f => f.status === 'pending').length} Files
+            {useTable && (
+              <Badge variant="outline" className="ml-2 text-xs">
+                With Tables
+              </Badge>
+            )}
+          </Button>
+        )}
+
+        {/* Authentication Warning */}
+        {!user?.user_id && (
+          <div className="p-3 bg-yellow-500/20 border border-yellow-400/30 rounded-lg">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-yellow-400" />
+              <span className="text-yellow-400 text-sm font-medium">Authentication Required</span>
+            </div>
+            <p className="text-yellow-300 text-xs mt-1">Please log in to upload files</p>
+          </div>
+        )}
+
+        {/* Uploaded Files List */}
+        {uploadedFiles.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-white">Uploaded Files</h4>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {uploadedFiles.map((uploadedFile) => (
+                <div key={uploadedFile.id} className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-600/30">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {getStatusIcon(uploadedFile.status)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {uploadedFile.file.name}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge className={`text-xs ${getStatusColor(uploadedFile.status)}`}>
+                          {uploadedFile.status}
+                        </Badge>
+                        <span className="text-xs text-gray-400">
+                          {(uploadedFile.file.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      </div>
+                      {uploadedFile.error && (
+                        <p className="text-xs text-red-400 mt-1">{uploadedFile.error}</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {(uploadedFile.status === 'uploading' || uploadedFile.status === 'processing') && (
+                      <div className="w-16">
+                        <Progress value={uploadedFile.progress} className="h-2" />
+                      </div>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(uploadedFile.id)}
+                      disabled={isUploading}
+                      className="text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
-
+} 

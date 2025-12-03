@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
 
   // RBAC (Authentication & Authorization) endpoints
   RBAC_LOGIN: `${baseUrl}/rbac/login`,
+  RBAC_LOGOUT: `${baseUrl}/rbac/logout`,
   RBAC_REFRESH: `${baseUrl}/rbac/refresh`,
   RBAC_ME: `${baseUrl}/rbac/me`,
   RBAC_CHANGE_PASSWORD: `${baseUrl}/rbac/change-password`,
@@ -44,7 +45,16 @@ export const API_ENDPOINTS = {
   MSSQL_CONVERSATION_HISTORY: (dbId: number) => `${baseUrl}/mssql/conversation-history/${dbId}`,
   MSSQL_CLEAR_HISTORY: (dbId: number) => `${baseUrl}/mssql/clear-history/${dbId}`,
   MSSQL_GET_QUERY_HISTORY_BY_DB: (dbId: number) => `${baseUrl}/mssql/mssql/history/db/${dbId}`,
-  MSSQL_GET_USER_QUERY_HISTORY: (userId: string) => `${baseUrl}/mssql/mssql/history/${encodeURIComponent(userId)}`,
+  MSSQL_GET_USER_QUERY_HISTORY: (userId: string, limit?: number, offset?: number) => {
+    const baseEndpoint = `${baseUrl}/mssql/mssql/history/${encodeURIComponent(userId)}`;
+    if (limit !== undefined || offset !== undefined) {
+      const params = new URLSearchParams();
+      if (limit !== undefined) params.append('limit', String(limit));
+      if (offset !== undefined) params.append('offset', String(offset));
+      return `${baseEndpoint}?${params.toString()}`;
+    }
+    return baseEndpoint;
+  },
   MSSQL_CLEAR_USER_QUERY_HISTORY: (userId: string) => `${baseUrl}/mssql/mssql/history/${encodeURIComponent(userId)}`,
   MSSQL_GET_USER_QUERY_HISTORY_BY_DB: (userId: string, dbId: number) => `${baseUrl}/mssql/mssql/history/${encodeURIComponent(userId)}/db/${dbId}`,
   MSSQL_CLEAR_USER_QUERY_HISTORY_BY_DB: (userId: string, dbId: number) => `${baseUrl}/mssql/mssql/history/${encodeURIComponent(userId)}/db/${dbId}`,

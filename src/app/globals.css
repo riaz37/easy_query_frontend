@@ -53,85 +53,44 @@
    CSS CUSTOM PROPERTIES (DESIGN TOKENS)
    ============================================ */
 
-/* Base design tokens - Modern Minimal SaaS Style */
+/* Base color palette (Dark mode only) */
 :root {
-  --radius: 0.5rem; /* 8px - subtle rounded corners */
-  
-  /* Spacing scale (4px base unit) */
-  --spacing-1: 0.25rem;  /* 4px */
-  --spacing-2: 0.5rem;   /* 8px */
-  --spacing-3: 0.75rem;  /* 12px */
-  --spacing-4: 1rem;     /* 16px */
-  --spacing-5: 1.25rem;  /* 20px */
-  --spacing-6: 1.5rem;   /* 24px */
-  --spacing-8: 2rem;     /* 32px */
-  --spacing-10: 2.5rem;  /* 40px */
-  --spacing-12: 3rem;    /* 48px */
-  --spacing-16: 4rem;    /* 64px */
-  --spacing-20: 5rem;    /* 80px */
-  
-  /* Shadow scale - subtle elevations */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --radius: 0.625rem;
 }
 
-/* Modern Minimal Dark Mode - Linear/Vercel inspired */
+/* Dark mode color palette (OKLCH format for better color accuracy) */
 .dark {
-  /* Base colors - lighter backgrounds for spacious feel */
-  --background: oklch(0.18 0 0);           /* Slightly lighter than before */
-  --foreground: oklch(0.98 0 0);           /* High contrast text */
-  
-  /* Card colors - subtle elevation */
-  --card: oklch(0.22 0 0);                 /* Lighter cards */
-  --card-foreground: oklch(0.98 0 0);
-  
-  /* Popover/Dropdown */
-  --popover: oklch(0.22 0 0);
-  --popover-foreground: oklch(0.98 0 0);
-  
-  /* Primary - subtle, not too bright */
-  --primary: oklch(0.65 0.15 250);        /* Soft blue */
-  --primary-foreground: oklch(0.98 0 0);
-  
-  /* Secondary - neutral gray */
-  --secondary: oklch(0.25 0 0);
-  --secondary-foreground: oklch(0.98 0 0);
-  
-  /* Muted - for subtle text */
-  --muted: oklch(0.25 0 0);
-  --muted-foreground: oklch(0.65 0 0);     /* Better contrast */
-  
-  /* Accent - for highlights */
-  --accent: oklch(0.25 0 0);
-  --accent-foreground: oklch(0.98 0 0);
-  
-  /* Destructive - soft red */
-  --destructive: oklch(0.65 0.18 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  
-  /* Borders - very subtle */
-  --border: oklch(1 0 0 / 0.08);          /* Lighter borders */
-  --input: oklch(1 0 0 / 0.12);           /* Slightly more visible inputs */
-  --ring: oklch(0.65 0.15 250);            /* Focus ring matches primary */
-  
-  /* Chart colors - refined palette */
-  --chart-1: oklch(0.65 0.15 250);        /* Blue */
-  --chart-2: oklch(0.70 0.15 150);        /* Green */
-  --chart-3: oklch(0.75 0.15 50);          /* Yellow */
-  --chart-4: oklch(0.65 0.15 300);         /* Purple */
-  --chart-5: oklch(0.70 0.15 25);          /* Red */
-  
-  /* Sidebar - distinct but cohesive */
-  --sidebar: oklch(0.20 0 0);              /* Slightly different from background */
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.65 0.15 250);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.25 0 0);
-  --sidebar-accent-foreground: oklch(0.98 0 0);
-  --sidebar-border: oklch(1 0 0 / 0.08);
-  --sidebar-ring: oklch(0.65 0.15 250);
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
 }
 
 /* ============================================
@@ -157,26 +116,6 @@
   body {
     @apply bg-background antialiased;
     font-family: var(--font-public-sans), system-ui, -apple-system, sans-serif;
-    /* Smooth transitions for color changes */
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
-  
-  /* Improved typography scale */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-barlow), system-ui, -apple-system, sans-serif;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    line-height: 1.2;
-  }
-  
-  /* Better link styles */
-  a {
-    transition: color 0.15s ease;
-  }
-  
-  /* Smooth scroll behavior */
-  html {
-    scroll-behavior: smooth;
   }
 
   /* Prevent initial flash and enable smooth color scheme transitions */
@@ -1922,6 +1861,34 @@ nav {
   }
 }
 
+/* Voice navigation animations */
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Voice element highlighting animation */
+@keyframes voice-highlight {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.animate-voice-highlight {
+  animation: voice-highlight 1s ease-in-out infinite;
+}
 
 /* ============================================
    USERS PAGE RESPONSIVE STYLES
@@ -5454,25 +5421,114 @@ nav {
   }
 }
 
+/* SystemCard Animations */
+@keyframes cardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes cardFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+@keyframes cardPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes borderGlow {
+  0%, 100% {
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    border-color: rgba(16, 185, 129, 0.6);
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.3);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes imageZoom {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
 /* SystemCard Responsive Styles */
 .system-card-container {
   @apply absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto;
+  animation: cardEntrance 0.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .system-card-container {
+    animation: none;
+  }
+  
+  .system-card-wrapper {
+    animation: none !important;
+  }
 }
 
 .system-card-wrapper {
   @apply relative cursor-grab active:cursor-grabbing transition-all duration-300;
+  animation: cardFloat 6s ease-in-out infinite;
+}
+
+.system-card-wrapper:hover {
+  animation: none;
+  transform: translateY(-12px) scale(1.05);
+}
+
+.system-card-wrapper:active {
+  transform: translateY(-8px) scale(0.98);
+  transition: transform 0.1s ease-out;
 }
 
 .system-card-active {
-  @apply scale-105;
+  @apply scale-110;
+  animation: cardPulse 2s ease-in-out infinite;
 }
 
 .system-card-hover:hover {
-  @apply scale-105;
+  @apply scale-110;
 }
 
 .system-card-dragging {
   @apply z-50 shadow-2xl;
+  animation: none !important;
+  transform: scale(1.08) !important;
+}
+
+.system-card-clicked {
+  animation: cardPulse 0.3s ease-out;
+  transform: scale(0.95);
 }
 
 .system-card-glass {
@@ -5481,17 +5537,34 @@ nav {
   height: 200px;
   border-radius: 25.6px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1.2px solid transparent;
+  border: 1.2px solid rgba(16, 185, 129, 0.3);
   background-image: linear-gradient(158.39deg, rgba(255, 255, 255, 0.06) 14.19%, rgba(255, 255, 255, 0.000015) 50.59%, rgba(255, 255, 255, 0.000015) 68.79%, rgba(255, 255, 255, 0.015) 105.18%);
   background-origin: border-box;
   background-clip: padding-box, border-box;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.system-card-wrapper:hover .system-card-glass {
+  border-color: rgba(16, 185, 129, 0.6);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2), 
+              0 0 0 1px rgba(16, 185, 129, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.system-card-wrapper:active .system-card-glass {
+  transform: scale(0.98);
+  transition: transform 0.1s ease-out;
 }
 
 .system-card-shadow {
   @apply shadow-2xl;
-  box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.3),
+              0 0 0 1px rgba(16, 185, 129, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 /* Glow dots */
@@ -5523,11 +5596,22 @@ nav {
 .system-card-image-container {
   @apply absolute left-0 top-0 h-full;
   width: 65%;
+  overflow: hidden;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.system-card-wrapper:hover .system-card-image-container {
+  transform: scale(1.05);
 }
 
 .system-card-image {
   @apply object-cover rounded-l-[25.6px];
   object-position: center center;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.system-card-wrapper:hover .system-card-image {
+  transform: scale(1.1);
 }
 
 /* Text container */
@@ -5535,36 +5619,89 @@ nav {
   @apply absolute right-0 top-0 h-full px-6 py-6 flex flex-col justify-center overflow-hidden z-10;
   width: 60%;
   left: 40%;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.system-card-wrapper:hover .system-card-text-container {
+  transform: translateX(-4px);
 }
 
 .system-card-text-content {
   @apply relative z-10;
+  transition: opacity 0.3s ease-out;
 }
 
 .system-card-title {
   @apply text-lg font-semibold mb-2 tracking-wide text-white;
+  transition: all 0.3s ease-out;
+  background: linear-gradient(135deg, #ffffff 0%, #d1fae5 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.system-card-wrapper:hover .system-card-title {
+  background: linear-gradient(135deg, #ffffff 0%, #10b981 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
 }
 
 .system-card-description {
   @apply text-xs leading-relaxed break-words text-gray-200;
+  transition: color 0.3s ease-out;
+}
+
+.system-card-wrapper:hover .system-card-description {
+  @apply text-gray-100;
 }
 
 /* Hover glow effect */
 .system-card-hover-glow {
   @apply absolute inset-0 rounded-[25.6px] transition-all duration-500 pointer-events-none;
   background: radial-gradient(circle at 30% 50%, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+  opacity: 0;
 }
 
 .system-card-glow-active {
-  @apply opacity-30;
+  opacity: 0.4;
+  background: radial-gradient(circle at 30% 50%, rgba(16, 185, 129, 0.4) 0%, transparent 70%);
+  animation: borderGlow 3s ease-in-out infinite;
 }
 
 .system-card-glow-hover {
-  @apply opacity-0;
+  opacity: 0;
+  transition: opacity 0.4s ease-out;
 }
 
 .system-card-wrapper:hover .system-card-glow-hover {
-  @apply opacity-20;
+  opacity: 0.3;
+  background: radial-gradient(circle at 30% 50%, rgba(16, 185, 129, 0.3) 0%, transparent 70%);
+}
+
+/* Shimmer effect on hover */
+.system-card-glass::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  transition: left 0.5s ease-out;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.system-card-wrapper:hover .system-card-glass::before {
+  left: 100%;
+  transition: left 0.6s ease-out;
 }
 
 /* SystemCard Responsive Breakpoints */

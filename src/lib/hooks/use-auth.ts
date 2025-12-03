@@ -156,21 +156,39 @@ export function useAuth() {
     setIsLoading(true);
 
     try {
+      // Call logout API to blacklist tokens (if we have tokens)
+      if (tokens?.accessToken) {
+        try {
+          const logoutResponse = await ServiceRegistry.auth.logout(tokens.refreshToken);
+          if (logoutResponse.success) {
+            console.log('Tokens blacklisted successfully');
+          }
+        } catch (apiError) {
+          // Even if API call fails, proceed with local logout
+          console.warn('Logout API call failed, proceeding with local logout:', apiError);
+        }
+      }
+
       // Clear local state
-    setUser(null);
-    setTokens(null);
+      setUser(null);
+      setTokens(null);
       setError(null);
 
       // Clear storage
-    clearAuthStorage();
-    clearAllEasyQueryStorage();
+      clearAuthStorage();
+      clearAllEasyQueryStorage();
 
     } catch (err: any) {
       console.error('Logout error:', err);
+      // Even on error, clear local state
+      setUser(null);
+      setTokens(null);
+      clearAuthStorage();
+      clearAllEasyQueryStorage();
     } finally {
       setIsLoading(false);
     }
-  }, [clearAuthStorage]);
+  }, [clearAuthStorage, tokens]);
 
   // Change password function
   const changePassword = useCallback(async (oldPassword: string, newPassword: string): Promise<void> => {

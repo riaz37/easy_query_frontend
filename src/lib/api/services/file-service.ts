@@ -19,7 +19,7 @@ export class FileService extends BaseService {
 
   /**
    * Upload files to smart file system
-   * Supports both config_ids (for vector DB) and user_ids (legacy)
+   * Supports both config_ids (for vector DB) and user_ids
    */
   async uploadToSmartFileSystem(request: {
     files: File[];

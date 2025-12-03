@@ -8,8 +8,4 @@ export {
   useDatabaseContext,
   DatabaseContextProvider,
 } from "./DatabaseContextProvider";
-export {
-  FileConfigContext,
-  useFileConfigContext,
-  FileConfigContextProvider,
-} from "./FileConfigContextProvider";
+

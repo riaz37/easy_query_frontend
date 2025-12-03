@@ -1,66 +1,54 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoginForm } from './LoginForm';
-import { ChangePasswordForm } from './ChangePasswordForm';
 import { useAuthContext } from '@/components/providers';
-
-type AuthTab = 'login' | 'change-password';
+import { Spinner } from '@/components/ui/loading';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface AuthPageProps {
   onAuthSuccess?: () => void;
 }
 
 export function AuthPage({ onAuthSuccess }: AuthPageProps) {
-  const { isAuthenticated, user, logout } = useAuthContext();
+  const { isAuthenticated, user, isLoading } = useAuthContext();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<AuthTab>('login');
 
   const handleAuthSuccess = () => {
     onAuthSuccess?.();
-  };
-
-  const handleLogout = () => {
-    logout();
-    setActiveTab('login');
+    // Redirect to dashboard after successful login
+    router.push('/');
   };
 
   // Redirect authenticated users to dashboard
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !isLoading) {
       router.push('/');
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, isLoading, router]);
 
-  // Show loading state while redirecting
-  if (isAuthenticated && user) {
+  // Show loading state while checking authentication or redirecting
+  if (isLoading || (isAuthenticated && user)) {
     return (
-      <div className="w-full mx-auto">
-        <div className="text-center py-6 sm:py-8">
-          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-base sm:text-lg font-medium text-foreground">
-            Redirecting to dashboard...
-          </p>
-        </div>
+      <div className="flex min-h-screen items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Spinner size="lg" className="mb-4" />
+            <p className="text-muted-foreground">
+              {isLoading ? 'Checking authentication...' : 'Redirecting to dashboard...'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      {activeTab === 'login' && (
-        <LoginForm
-          onSuccess={handleAuthSuccess}
-        />
-      )}
-
-      {activeTab === 'change-password' && (
-        <ChangePasswordForm
-          onSuccess={() => setActiveTab('login')}
-          onCancel={() => setActiveTab('login')}
-        />
-      )}
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
+        <LoginForm onSuccess={handleAuthSuccess} />
+      </div>
     </div>
   );
 } 

@@ -68,6 +68,33 @@ export class AuthService extends BaseService {
   }
 
   /**
+   * Logout - Blacklist current access token and optional refresh token
+   * Requires: Bearer token in Authorization header
+   */
+  async logout(refreshToken?: string): Promise<ServiceResponse<{ message: string; success: boolean }>> {
+    try {
+      const body: { refresh_token?: string } = {};
+      if (refreshToken && refreshToken.trim().length > 0) {
+        body.refresh_token = refreshToken;
+      }
+
+      return await this.post<{ message: string; success: boolean }>(
+        API_ENDPOINTS.RBAC_LOGOUT,
+        Object.keys(body).length > 0 ? body : undefined
+      );
+    } catch (error: any) {
+      // Don't throw error on logout - even if API call fails, we should still clear local state
+      // Log the error but return success so logout can proceed
+      console.warn('Logout API call failed (proceeding with local logout):', error);
+      return {
+        data: { message: 'Logged out locally', success: true },
+        success: true,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
+  /**
    * Refresh access token
    */
   async refreshToken(refreshToken: string): Promise<ServiceResponse<TokenResponse>> {

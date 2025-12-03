@@ -85,8 +85,8 @@ export const OpeningAnimation = ({
               className="mb-8"
             >
               <Image
-                src="/logo/logo.svg"
-                alt="Easy Query Logo"
+                src="/logo/ESAP_W.png"
+                alt="ESAP Logo"
                 width={200}
                 height={80}
                 priority

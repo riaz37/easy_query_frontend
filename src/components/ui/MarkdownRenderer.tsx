@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { processMarkdownContent, sanitizeMarkdownContent, processDocumentationContent } from '@/utils/markdownUtils';
+import { processMarkdownContent, sanitizeMarkdownContent, processDocumentationContent, fixRawMarkdownSymbols } from '@/utils/markdownUtils';
 
 interface MarkdownRendererProps {
   content: string;
@@ -23,18 +23,21 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
     // First sanitize the content for security
     const sanitized = sanitizeMarkdownContent(content);
     
+    // Fix raw Markdown symbols that appear as text
+    const fixedSymbols = fixRawMarkdownSymbols(sanitized);
+    
     // Use documentation processing for complex content with HTML comments
     if (isDocumentation) {
-      return processDocumentationContent(sanitized);
+      return processDocumentationContent(fixedSymbols);
     }
     
     // Then process escaped characters for regular content
-    return processMarkdownContent(sanitized);
+    return processMarkdownContent(fixedSymbols);
   }, [content, isDocumentation]);
 
   return (
     <div className={`overflow-y-auto ${className}`} style={{ maxHeight }}>
-      <div className="prose prose-invert prose-sm max-w-none">
+      <div className="prose prose-invert prose-sm max-w-3xl mx-auto">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{

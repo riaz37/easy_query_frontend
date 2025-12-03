@@ -503,31 +503,6 @@ export interface GetUserTableNamesApiResponse {
 
 export type GetUserTableNamesResponse = string[];
 
-// User Current Database Types
-export interface UserCurrentDBRequest {
-  db_id: number;
-}
-
-export interface UserCurrentDBData {
-  user_id: string;
-  db_id: number;
-  business_rule: string;
-  report_structure: string;
-  table_info: Record<string, any>;
-  db_schema: Record<string, any>;
-  created_at: string;
-  updated_at: string;
-}
-
-// Full API response structure (what the API actually returns)
-export interface UserCurrentDBApiResponse {
-  status: string;
-  message: string;
-  data: UserCurrentDBData;
-}
-
-// Service response types (what services return after API client interceptor)
-export type UserCurrentDBResponse = UserCurrentDBData;
 
 // Table Info Generation Types
 export interface GenerateTableInfoRequest {
@@ -662,19 +637,6 @@ export interface TableMetadata {
   database_url: string;
 }
 
-export interface UserCurrentDBTableData {
-  user_id: string;
-  db_id: number;
-  business_rule: string;
-  table_info: {
-    metadata: TableMetadata;
-    tables: TableInfo[];
-    unmatched_business_rules: string[];
-  };
-  created_at: string;
-  updated_at: string;
-}
-
 // Excel to Database Types - Updated to match actual API responses
 export interface ExcelToDBHealthResponse {
   status: string;
@@ -733,22 +695,6 @@ export interface ExcelToDBGetAIMappingResponse {
   };
 }
 
-// Legacy type for backward compatibility (if needed)
-export interface LegacyExcelToDBGetAIMappingResponse {
-  status: string;
-  message: string;
-  data: {
-    table_name: string;
-    excel_columns: string[];
-    database_columns: string[];
-    suggested_mapping: ColumnMappingSuggestion[];
-    metadata: {
-      excel_rows_analyzed: number;
-      database_table_exists: boolean;
-      mapping_confidence: number;
-    };
-  };
-}
 
 
 // New Table API Types (matching backend API structure)

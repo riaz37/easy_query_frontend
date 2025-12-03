@@ -33,15 +33,6 @@ export interface FileMeta {
     stopPolling: () => void;
   }
   
-  // Query history types
-  export interface FileQueryHistory {
-    id: string;
-    question: string;
-    answer: string;
-    timestamp: Date;
-    files?: string[];
-  }
-  
   // UI state types
   export interface UIState {
     theme: 'light' | 'dark';

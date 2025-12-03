@@ -548,3 +548,4 @@ export const newTableService = new NewTableService();
 
 // Export for backward compatibility
 export default newTableService;
+

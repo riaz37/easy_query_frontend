@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { PageLoadingProps } from "./types";
-import { EasyQueryBrandLoader } from "./EasyQueryBrandLoader";
+import { ESAPBrandLoader } from "./ESAPBrandLoader";
 import { ProgressLoader } from "./ProgressLoader";
 
 export function PageLoader({ 
@@ -23,7 +23,7 @@ export function PageLoader({
       <div className="text-center space-y-6 max-w-md">
         {/* Main loader */}
         <div className="flex justify-center">
-          <EasyQueryBrandLoader size={size} />
+          <ESAPBrandLoader size={size} />
         </div>
         
         {/* Message */}

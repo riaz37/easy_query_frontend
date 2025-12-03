@@ -1,18 +1,12 @@
 import { queryService } from './query-service';
-import { historyService } from './history-service';
 import { databaseService } from './database-service';
-import { businessRulesService } from './business-rules-service';
-import { userCurrentDBService } from './user-current-db-service';
 import { vectorDBService } from './vector-db-service';
 import { fileService } from './file-service';
 import { authService } from './auth-service';
 import { excelToDBService } from './excel-to-db-service';
 import { newTableService } from './new-table-service';
 import { userAccessService } from './user-access-service';
-import { UserConfigService } from './user-config-service';
 import { DatabaseConfigService } from './database-config-service';
-import { ReportService } from './report-service';
-import { userTasksService } from './user-tasks-service';
 import { databaseQueryBackgroundService } from './database-query-background-service';
 import { fileQueryBackgroundService } from './file-query-background-service';
 import { adminService } from './admin-service';
@@ -29,8 +23,6 @@ import { dashboardService } from './dashboard-service';
  * Available services:
  * - query: Database query operations
  * - database: Database management
- * - businessRules: Business rules management
- * - userCurrentDB: User's current database
  * - vectorDB: Vector database operations
  * - file: File operations
  * - auth: Authentication
@@ -41,20 +33,14 @@ import { dashboardService } from './dashboard-service';
 export const ServiceRegistry = {
   // Standardized services (using BaseService)
   query: queryService,
-  history: historyService,
   database: databaseService,
-  businessRules: businessRulesService,
-  userCurrentDB: userCurrentDBService,
   vectorDB: vectorDBService,
   file: fileService,
   auth: authService,
   excelToDB: excelToDBService,
   newTable: newTableService,
   userAccess: userAccessService,
-  userConfig: new UserConfigService(),
   databaseConfig: DatabaseConfigService,
-  reports: new ReportService(),
-  userTasks: userTasksService,
   databaseQueryBackground: databaseQueryBackgroundService,
   fileQueryBackground: fileQueryBackgroundService,
   admin: adminService,
@@ -67,20 +53,14 @@ export const ServiceRegistry = {
 export interface ServiceRegistryInterface {
   // All services are now standardized (using BaseService)
   query: typeof queryService;
-  history: typeof historyService;
   database: typeof databaseService;
-  businessRules: typeof businessRulesService;
-  userCurrentDB: typeof userCurrentDBService;
   vectorDB: typeof vectorDBService;
   file: typeof fileService;
   auth: typeof authService;
   excelToDB: typeof excelToDBService;
   newTable: typeof newTableService;
   userAccess: typeof userAccessService;
-  userConfig: UserConfigService;
   databaseConfig: typeof DatabaseConfigService;
-  reports: ReportService;
-  userTasks: typeof userTasksService;
   databaseQueryBackground: typeof databaseQueryBackgroundService;
   fileQueryBackground: typeof fileQueryBackgroundService;
   admin: typeof adminService;
@@ -102,14 +82,10 @@ export async function getServiceHealthStatus(): Promise<{
   // Simplified health checks - just test basic connectivity
   const healthChecks = await Promise.allSettled([
     // Test only essential services with minimal data
-    ServiceRegistry.query.search({ query: 'test', limit: 1 }).then(() => ({ service: 'query', status: 'healthy' as const })),
     ServiceRegistry.database.getAllDatabases().then(() => ({ service: 'database', status: 'healthy' as const })),
     ServiceRegistry.file.getSupportedFileTypes().then(() => ({ service: 'file', status: 'healthy' as const })),
     ServiceRegistry.auth.validateTokenFormat('test').then(() => ({ service: 'auth', status: 'healthy' as const })),
     // Assume other services are healthy to avoid heavy API calls
-    Promise.resolve({ service: 'history', status: 'healthy' as const }),
-    Promise.resolve({ service: 'businessRules', status: 'healthy' as const }),
-    Promise.resolve({ service: 'userCurrentDB', status: 'healthy' as const }),
     Promise.resolve({ service: 'vectorDB', status: 'healthy' as const }),
     Promise.resolve({ service: 'excelToDB', status: 'healthy' as const }),
     Promise.resolve({ service: 'newTable', status: 'healthy' as const }),
@@ -120,7 +96,7 @@ export async function getServiceHealthStatus(): Promise<{
   const services: Record<string, { status: 'healthy' | 'unhealthy'; error?: string }> = {};
   let healthyCount = 0;
 
-  const serviceNames = ['query', 'history', 'database', 'businessRules', 'userCurrentDB', 'vectorDB', 'file', 'auth', 'excelToDB', 'newTable', 'userAccess', 'databaseConfig'];
+  const serviceNames = ['query', 'database', 'vectorDB', 'file', 'auth', 'excelToDB', 'newTable', 'userAccess', 'databaseConfig'];
 
   healthChecks.forEach((result, index) => {
     const serviceName = serviceNames[index];
@@ -231,10 +207,7 @@ export class ServiceMetricsCollector {
 export function getStandardizedServices(): string[] {
   return [
     'query',
-    'history', 
     'database',
-    'businessRules',
-    'userCurrentDB',
     'vectorDB',
     'file',
     'auth',
@@ -261,10 +234,7 @@ export function isServiceStandardized(serviceName: string): boolean {
 // Export individual services for direct access
 export {
   queryService,
-  historyService,
   databaseService,
-  businessRulesService,
-  userCurrentDBService,
   vectorDBService,
   fileService,
   authService,

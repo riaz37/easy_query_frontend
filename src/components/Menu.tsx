@@ -2,15 +2,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useUIStore } from "@/store/uiStore";
-import { useAuthContext } from "@/components/providers/AuthContextProvider";
+import { useUIStore } from "@/store/ui-store";
 import { cn } from "@/lib/utils";
 
 export default function Menu() {
   const pathname = usePathname();
-  const { setShowSidebar } = useUIStore();
-  const { user } = useAuthContext();
-  const isAdmin = user?.isAdmin || user?.role === 'admin';
+  const { setSidebarOpen } = useUIStore();
 
   const menuItems = [
     {
@@ -24,11 +21,6 @@ export default function Menu() {
       path: "/database-query",
     },
     {
-      icon: "/dashboard/Report.svg",
-      name: "History",
-      path: "/history",
-    },
-    {
       icon: "/dashboard/File Query.svg",
       name: "File Query",
       path: "/file-query",
@@ -38,11 +30,16 @@ export default function Menu() {
       name: "Tables",
       path: "/tables",
     },
-    ...(isAdmin ? [{
+    {
+      icon: "/dashboard/Company.svg",
+      name: "Company Structure",
+      path: "/company-structure",
+    },
+    {
       icon: "/dashboard/user.svg",
-      name: "Admin",
-      path: "/admin",
-    }] : []),
+      name: "Users",
+      path: "/users",
+    },
   ];
 
   return (
@@ -68,7 +65,7 @@ export default function Menu() {
               <Link
                 key={item.name}
                 href={item.path}
-                onClick={() => setShowSidebar(false)}
+                onClick={() => setSidebarOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-[99px] text-sm font-medium transition-all duration-200 menu-item",
                   "max-sm:px-3 max-sm:py-4 max-sm:text-base max-sm:gap-4",

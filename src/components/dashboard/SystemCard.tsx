@@ -26,6 +26,7 @@ export const SystemCard: React.FC<SystemCardProps> = ({
   const [isDraggingLocal, setIsDraggingLocal] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [isClicked, setIsClicked] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -38,6 +39,14 @@ export const SystemCard: React.FC<SystemCardProps> = ({
     
     onMouseDown(e, node.id);
   }, [node.id, onMouseDown]);
+
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    // Only trigger click animation if not dragging
+    if (!isDraggingLocal && !isDragging) {
+      setIsClicked(true);
+      setTimeout(() => setIsClicked(false), 200);
+    }
+  }, [isDraggingLocal, isDragging]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingLocal) return;
@@ -102,12 +111,14 @@ export const SystemCard: React.FC<SystemCardProps> = ({
         top: `${currentPosition.y}%`,
         zIndex: isDraggingState ? 1000 : 10,
         transition: isDraggingState ? "none" : "all 0.3s ease-out",
+        animationDelay: `${node.id.charCodeAt(0) * 50}ms`,
       }}
       onMouseEnter={() => onMouseEnter(node.id)}
       onMouseLeave={onMouseLeave}
+      onClick={handleClick}
     >
       <div
-        className={`system-card-wrapper ${isActiveState ? "system-card-active" : "system-card-hover"} ${isDraggingState ? "system-card-dragging" : ""}`}
+        className={`system-card-wrapper ${isActiveState ? "system-card-active" : "system-card-hover"} ${isDraggingState ? "system-card-dragging" : ""} ${isClicked ? "system-card-clicked" : ""}`}
         onMouseDown={handleMouseDown}
         onMouseEnter={(e) => {
           if (!isDraggingLocal) {

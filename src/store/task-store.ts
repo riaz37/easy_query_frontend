@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { multiTaskMonitor } from '@/lib/services/multi-task-monitor';
 
 export interface Task {
   id: string;
@@ -219,45 +218,4 @@ export const TaskUtils = {
     });
   },
 
-  // Start monitoring a report task with multi-task support
-  startReportMonitoring: (taskId: string, reportTaskId: string, options: {
-    onProgress?: (status: any) => void;
-    onComplete?: (results: any) => void;
-    onError?: (error: Error) => void;
-    pollInterval?: number;
-  } = {}) => {
-    multiTaskMonitor.startMonitoring(reportTaskId, {
-      onProgress: (status) => {
-        // Update the task progress in the store
-        TaskUtils.updateProgress(taskId, status.progress_percentage || 0);
-        options.onProgress?.(status);
-      },
-      onComplete: (results) => {
-        // Complete the task in the store
-        TaskUtils.completeTask(taskId, results);
-        options.onComplete?.(results);
-      },
-      onError: (error) => {
-        // Fail the task in the store
-        TaskUtils.failTask(taskId, error.message);
-        options.onError?.(error);
-      },
-      pollInterval: options.pollInterval || 2000,
-    });
-  },
-
-  // Stop monitoring a specific task
-  stopReportMonitoring: (reportTaskId: string) => {
-    multiTaskMonitor.stopMonitoring(reportTaskId);
-  },
-
-  // Stop all monitoring
-  stopAllMonitoring: () => {
-    multiTaskMonitor.stopAllMonitoring();
-  },
-
-  // Get active monitor count
-  getActiveMonitorCount: () => {
-    return multiTaskMonitor.getActiveMonitorCount();
-  },
 };

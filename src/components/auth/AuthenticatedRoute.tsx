@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/loading';
 import { Button } from '@/components/ui/button';
 import { AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent } from '@/components/ui/card';
+import { PageLayout } from '@/components/layout/PageLayout';
 
 interface AuthenticatedRouteProps {
   children: React.ReactNode;
@@ -37,16 +37,24 @@ export function AuthenticatedRoute({
   // Show loading state while checking authentication or during initialization
   if ((isLoading || !isInitialized) && showLoadingSpinner) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-8">
-            <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary mx-auto mb-4" />
-            <p className="text-base sm:text-lg font-medium text-foreground">
-              {loadingMessage}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <PageLayout
+        background={["frame", "gridframe"]}
+        maxWidth="6xl"
+        className="min-h-screen flex items-center justify-center"
+      >
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="card-enhanced">
+            <div className="card-content-enhanced">
+              <div className="text-center py-6 sm:py-8">
+                <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-emerald-400 mx-auto mb-4" />
+                <p className="text-base sm:text-lg font-medium text-white">
+                  {loadingMessage}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </PageLayout>
     );
   }
 
@@ -62,25 +70,37 @@ export function AuthenticatedRoute({
     }
     
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-8">
-            <div className="flex items-center justify-center gap-2 text-destructive mb-4">
-              <AlertCircle className="w-6 h-6" />
-              <h2 className="text-xl font-semibold">Authentication Required</h2>
+      <PageLayout
+        background={["frame", "gridframe"]}
+        maxWidth="6xl"
+        className="min-h-screen flex items-center justify-center"
+      >
+        <div className="w-full max-w-4xl mx-auto">
+          <div className="card-enhanced">
+            <div className="card-content-enhanced">
+              <div className="text-center py-6 sm:py-8">
+                <div className="flex items-center justify-center gap-2 text-yellow-600 dark:text-yellow-400 mb-4">
+                  <AlertCircle className="w-6 h-6" />
+                  <h2 className="text-xl font-semibold">Authentication Required</h2>
+                </div>
+                <p className="text-gray-300 dark:text-gray-400 mb-6 text-base">
+                  {authRequiredMessage}
+                </p>
+                <Button
+                  onClick={() => router.push(redirectTo)}
+                  className="w-full text-sm sm:text-base font-semibold transition-colors duration-200 text-white bg-white/4 hover:bg-white/10"
+                  style={{
+                    borderRadius: '99px',
+                    height: '48px'
+                  }}
+                >
+                  Go to Login
+                </Button>
+              </div>
             </div>
-            <p className="text-muted-foreground mb-6 text-base">
-              {authRequiredMessage}
-            </p>
-            <Button
-              onClick={() => router.push(redirectTo)}
-              className="w-full"
-            >
-              Go to Login
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </PageLayout>
     );
   }
 

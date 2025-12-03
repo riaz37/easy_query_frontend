@@ -1,6 +1,5 @@
 import { API_ENDPOINTS } from '../endpoints';
 import { BaseService, ServiceResponse } from './base';
-import { MSSQLConfigData } from '@/types/api';
 import { CacheInvalidator } from '../cache/cache-invalidator';
 
 /**
@@ -14,17 +13,6 @@ export interface DatabaseInfo {
   status: 'active' | 'inactive' | 'error';
   lastUpdated: string;
   metadata?: Record<string, any>;
-}
-
-/**
- * Database reload result
- */
-export interface DatabaseReloadResult {
-  success: boolean;
-  message: string;
-  reloadedAt: string;
-  affectedTables?: string[];
-  duration?: number;
 }
 
 /**
@@ -148,13 +136,6 @@ export class DatabaseService extends BaseService {
     };
   }
 
-  /**
-   * Reload the database schema and metadata
-   * NOTE: RELOAD_DB endpoint removed - functionality not available in new API
-   */
-  async reloadDatabase(): Promise<ServiceResponse<DatabaseReloadResult>> {
-    throw new Error('RELOAD_DB endpoint has been removed. Database reload functionality is not available in the new API.');
-  }
 
   /**
    * Test database connection

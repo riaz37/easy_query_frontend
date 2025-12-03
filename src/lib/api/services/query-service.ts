@@ -1,21 +1,5 @@
 import { API_ENDPOINTS, buildEndpointWithQueryParams } from "../endpoints";
-import { BaseService, ServiceResponse, ServiceError } from "./base";
-import { transformResponse } from "../transformers";
-
-/**
- * Search query parameters
- */
-export interface SearchQueryParams {
-  query: string;
-  useIntentReranker?: boolean;
-  useChunkReranker?: boolean;
-  useDualEmbeddings?: boolean;
-  intentTopK?: number;
-  chunkTopK?: number;
-  chunkSource?: string;
-  maxChunksForAnswer?: number;
-  answerStyle?: string;
-}
+import { BaseService, ServiceResponse } from "./base";
 
 /**
  * Database query parameters
@@ -36,12 +20,6 @@ export interface DbQueryParams {
 export interface QueryResultData {
   sql: string;
   data: any[];
-  history: Array<{
-    timestamp: string;
-    question: string;
-    query: string;
-    results_summary: string;
-  }>;
   model_used: string;
 }
 
@@ -51,14 +29,6 @@ export interface QueryResultData {
  */
 export class QueryService extends BaseService {
   protected readonly serviceName = 'QueryService';
-
-  /**
-   * Send a search query to the API
-   * NOTE: SEARCH endpoint removed - use MSSQL_QUERY for database queries instead
-   */
-  async search(params: SearchQueryParams): Promise<ServiceResponse<QueryResultData>> {
-    throw new Error('SEARCH endpoint has been removed. Use query() method with MSSQL_QUERY endpoint instead.');
-  }
 
   /**
    * Send a database query to the API (synchronous)
@@ -327,6 +297,93 @@ export class QueryService extends BaseService {
       success: true,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /**
+   * Get query history for a user
+   * User ID is extracted from JWT token on backend
+   */
+  async getUserQueryHistory(
+    userId: string,
+    limit: number = 50,
+    offset: number = 0
+  ): Promise<ServiceResponse<{
+    user_id: string;
+    total_count: number;
+    limit: number;
+    offset: number;
+    history: Array<{
+      task_id: string;
+      status: 'queued' | 'running' | 'completed' | 'failed';
+      created_at: string;
+      updated_at: string;
+      db_id: number;
+      user_id: string;
+      model: string;
+      question: string;
+      table_agent_mode?: string;
+      use_column_agent?: boolean;
+      started_at: string;
+      result?: {
+        status_code: number;
+        payload: {
+          sql: string;
+          data: any[];
+          history: Array<{
+            timestamp: string;
+            question: string;
+            query: string;
+            results_summary: string;
+          }>;
+          model_used: string;
+        };
+      };
+    }>;
+  }>> {
+    this.validateRequired({ userId }, ['userId']);
+    this.validateTypes({ userId, limit, offset }, {
+      userId: 'string',
+      limit: 'number',
+      offset: 'number',
+    });
+
+    if (!userId.trim()) {
+      throw this.createValidationError('User ID cannot be empty');
+    }
+
+    if (limit < 0) {
+      throw this.createValidationError('Limit must be non-negative');
+    }
+
+    if (offset < 0) {
+      throw this.createValidationError('Offset must be non-negative');
+    }
+
+    return this.get(
+      API_ENDPOINTS.MSSQL_GET_USER_QUERY_HISTORY(userId, limit, offset)
+    );
+  }
+
+  /**
+   * Clear query history for a user
+   * User ID is extracted from JWT token on backend
+   */
+  async clearUserQueryHistory(userId: string): Promise<ServiceResponse<{
+    status_code: number;
+    message: string;
+    deleted_count: number;
+    user_id: string;
+  }>> {
+    this.validateRequired({ userId }, ['userId']);
+    this.validateTypes({ userId }, { userId: 'string' });
+
+    if (!userId.trim()) {
+      throw this.createValidationError('User ID cannot be empty');
+    }
+
+    return this.delete(
+      API_ENDPOINTS.MSSQL_CLEAR_USER_QUERY_HISTORY(userId)
+    );
   }
 }
 

@@ -47,13 +47,19 @@ export interface AuthState {
   error: string | null;
 }
 
+// Updated to match useAuth hook implementation
 export interface AuthContextData extends AuthState {
   isInitialized: boolean;
-  login: (data: LoginRequest) => Promise<User>;
-  logout: () => void;
+  // LoginRequest from service uses user_id, not username
+  login: (data: { user_id: string; password: string }) => Promise<void>;
+  logout: () => Promise<void>;
   changePassword: (oldPassword: string, newPassword: string) => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
   clearError: () => void;
+  // Additional utilities from useAuth
+  checkTokenValidity?: () => boolean;
+  getUserId?: () => string | null;
+  clearAuthStorage?: () => void;
 }
 
 // JWT Token payload structure (based on the token from the API)

@@ -2,23 +2,23 @@
 
 import React from "react";
 import { TablesManager } from "@/components/tables/TablesManager";
+import { PageLayout } from "@/components/layout/PageLayout";
 import { AuthenticatedRoute } from "@/components/auth";
-import { AppLayout } from "@/components/layout/AppLayout";
 
 export default function TablesPage() {
   return (
     <AuthenticatedRoute
       authRequiredMessage="Please log in to access database table management features."
+      className="h-screen w-full overflow-hidden"
     >
-      <AppLayout 
-        title="Tables" 
-        description="Browse and manage database tables"
-        showHeader={true}
+      <PageLayout 
+        background={["frame", "gridframe"]} 
+        container={false} 
+        maxWidth="full"
+        className="h-screen w-full overflow-hidden"
       >
-        <div className="h-[calc(100vh-8rem)] overflow-hidden">
-          <TablesManager />
-        </div>
-      </AppLayout>
+        <TablesManager />
+      </PageLayout>
     </AuthenticatedRoute>
   );
 }

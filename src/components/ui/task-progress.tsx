@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/loading";
 import { Progress } from "@/components/ui/progress";
@@ -40,6 +40,21 @@ export function TaskProgress({
   });
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [isPolling, setIsPolling] = useState(false);
+  
+  // Track if completion callback has been called to prevent multiple calls
+  const completionCalledRef = useRef(false);
+  // Store the latest callback in a ref to avoid dependency issues
+  const onTaskCompleteRef = useRef(onTaskComplete);
+  
+  // Update ref when callback changes
+  useEffect(() => {
+    onTaskCompleteRef.current = onTaskComplete;
+  }, [onTaskComplete]);
+
+  // Reset completion flag when taskId changes
+  useEffect(() => {
+    completionCalledRef.current = false;
+  }, [taskId]);
 
   // Timer effect for elapsed time
   useEffect(() => {
@@ -56,13 +71,27 @@ export function TaskProgress({
   // Polling effect for task status
   useEffect(() => {
     if (!taskId || isPolling) return;
+    
+    // Reset completion flag when starting new polling
+    completionCalledRef.current = false;
 
     let pollTimer: NodeJS.Timeout;
+    let isCancelled = false;
     
     const pollTaskStatus = async () => {
+      // Don't poll if already cancelled or if completion was already called
+      if (isCancelled || completionCalledRef.current) {
+        return;
+      }
+      
       try {
         setIsPolling(true);
         const response = await MSSQLConfigService.getTaskStatus(taskId);
+        
+        // Check again after async operation
+        if (isCancelled || completionCalledRef.current) {
+          return;
+        }
         
         // Handle different response formats
         let taskData: any = response;
@@ -87,11 +116,14 @@ export function TaskProgress({
         
         setTaskStatus(newStatus);
         
-        if (newStatus.status === 'success') {
-          onTaskComplete?.(true, newStatus.result);
+        // Only call completion callback once
+        if (newStatus.status === 'success' && !completionCalledRef.current) {
+          completionCalledRef.current = true;
+          onTaskCompleteRef.current?.(true, newStatus.result);
           return;
-        } else if (newStatus.status === 'failed') {
-          onTaskComplete?.(false, newStatus.error);
+        } else if (newStatus.status === 'failed' && !completionCalledRef.current) {
+          completionCalledRef.current = true;
+          onTaskCompleteRef.current?.(false, newStatus.error);
           return;
         }
         
@@ -100,6 +132,11 @@ export function TaskProgress({
           pollTimer = setTimeout(pollTaskStatus, pollInterval);
         }
       } catch (error: any) {
+        // Check again after error
+        if (isCancelled || completionCalledRef.current) {
+          return;
+        }
+        
         console.error('Error polling task status:', error);
         const errorMessage = error?.message || error?.toString() || 'Failed to check task status';
         setTaskStatus(prev => ({
@@ -107,7 +144,12 @@ export function TaskProgress({
           status: 'failed',
           error: errorMessage,
         }));
-        onTaskComplete?.(false, errorMessage);
+        
+        // Only call completion callback once
+        if (!completionCalledRef.current) {
+          completionCalledRef.current = true;
+          onTaskCompleteRef.current?.(false, errorMessage);
+        }
       } finally {
         setIsPolling(false);
       }
@@ -117,11 +159,12 @@ export function TaskProgress({
     pollTaskStatus();
 
     return () => {
+      isCancelled = true;
       if (pollTimer) {
         clearTimeout(pollTimer);
       }
     };
-  }, [taskId, onTaskComplete, pollInterval, isPolling]);
+  }, [taskId, pollInterval]);
 
   const getStatusIcon = () => {
     switch (taskStatus.status) {

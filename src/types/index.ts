@@ -20,7 +20,6 @@ export type {
 export type {
   FileMeta,
   FileUploadState,
-  FileQueryHistory,
   UIState,
   Notification,
 } from "./store";

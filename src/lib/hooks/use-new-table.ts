@@ -1,5 +1,16 @@
 import { useState, useCallback } from "react";
 import { ServiceRegistry } from "../api";
+import { toast } from "sonner";
+import type {
+  NewTableCreateRequest,
+  NewTableCreateResponse,
+  NewTableGetRequest,
+  NewTableGetResponse,
+  NewTableUpdateRequest,
+  NewTableUpdateResponse,
+  NewTableDeleteRequest,
+  NewTableDeleteResponse,
+} from "@/types/api";
 
 /**
  * Hook for New Table operations using standardized ServiceRegistry
@@ -7,56 +18,32 @@ import { ServiceRegistry } from "../api";
 export function useNewTable() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [tableData, setTableData] = useState<any>(null);
-  const [supportedTypes, setSupportedTypes] = useState<any>(null);
-  const [validationResult, setValidationResult] = useState<any>(null);
+  const [createResult, setCreateResult] = useState<NewTableCreateResponse | null>(null);
+  const [dataTypes, setDataTypes] = useState<string[]>([]);
 
   /**
    * Create a new table
    */
-  const createTable = useCallback(async (request: {
-    user_id: string;
-    table_name: string;
-    schema: string;
-    columns: Array<{
-      name: string;
-      data_type: string;
-      nullable?: boolean;
-      is_primary?: boolean;
-      is_identity?: boolean;
-    }>;
-  }) => {
+  const createTable = useCallback(async (request: NewTableCreateRequest) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
+    setCreateResult(null);
 
     try {
-      const createRequest = {
-        user_id: request.user_id,
-        table_name: request.table_name,
-        schema: request.schema,
-        columns: request.columns.map(col => ({
-          name: col.name,
-          data_type: col.data_type,
-          nullable: col.nullable ?? true,
-          is_primary: col.is_primary ?? false,
-          is_identity: col.is_identity ?? false,
-        })),
-      };
-      
-      const response = await ServiceRegistry.newTable.createTable(createRequest);
-      
-      if (response.success) {
-        setSuccess(true);
-        setTableData(response.data);
-        return response.data;
+      const result = await ServiceRegistry.newTable.createTable(request);
+
+      if (result.success && result.data) {
+        setCreateResult(result.data);
+        toast.success(`Table "${request.table_name}" created successfully!`);
+        return result.data;
       } else {
-        throw new Error(response.error || "Failed to create table");
+        throw new Error(result.error || "Failed to create table");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to create table");
-      return null;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to create table";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -65,68 +52,49 @@ export function useNewTable() {
   /**
    * Get table information
    */
-  const getTable = useCallback(async (request: {
-    user_id: string;
-    table_name: string;
-  }) => {
+  const getTable = useCallback(async (request: NewTableGetRequest) => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await ServiceRegistry.newTable.getTable(request);
-      
-      if (response.success) {
-        setTableData(response.data);
-        return response.data;
+      const result = await ServiceRegistry.newTable.getTable(request);
+
+      if (result.success && result.data) {
+        return result.data;
       } else {
-        throw new Error(response.error || "Failed to get table information");
+        throw new Error(result.error || "Failed to get table");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to get table information");
-      return null;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to get table";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
   /**
-   * Update table structure
+   * Update a table
    */
-  const updateTable = useCallback(async (request: {
-    table_name: string;
-    database_id: number;
-    add_columns?: Array<{
-      name: string;
-      type: string;
-      nullable?: boolean;
-      default?: string;
-      primary_key?: boolean;
-    }>;
-    drop_columns?: string[];
-    modify_columns?: Array<{
-      name: string;
-      type: string;
-      nullable?: boolean;
-      default?: string;
-    }>;
-  }) => {
+  const updateTable = useCallback(async (request: NewTableUpdateRequest) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
-      const response = await ServiceRegistry.newTable.updateTable(request);
-      
-      if (response.success) {
-        setSuccess(true);
-        setTableData(response.data);
-        return response.data;
+      const result = await ServiceRegistry.newTable.updateTable(request);
+
+      if (result.success && result.data) {
+        toast.success(`Table "${request.table_name}" updated successfully!`);
+        return result.data;
       } else {
-        throw new Error(response.error || "Failed to update table");
+        throw new Error(result.error || "Failed to update table");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to update table");
-      return null;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to update table";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -135,76 +103,89 @@ export function useNewTable() {
   /**
    * Delete a table
    */
-  const deleteTable = useCallback(async (request: {
-    table_name: string;
-    database_id: number;
-  }) => {
+  const deleteTable = useCallback(async (request: NewTableDeleteRequest) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
-      const response = await ServiceRegistry.newTable.deleteTable(request);
-      
-      if (response.success) {
-      setSuccess(true);
-        return true;
+      const result = await ServiceRegistry.newTable.deleteTable(request);
+
+      if (result.success && result.data) {
+        toast.success(`Table "${request.table_name}" deleted successfully!`);
+        return result.data;
       } else {
-        throw new Error(response.error || "Failed to delete table");
+        throw new Error(result.error || "Failed to delete table");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to delete table");
-      return false;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to delete table";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
   /**
-   * Get all tables for a database
+   * Get supported data types
    */
-  const getTablesForDatabase = useCallback(async (databaseId: number) => {
+  const getDataTypes = useCallback(async () => {
+    if (dataTypes.length > 0) {
+      return dataTypes;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const response = await ServiceRegistry.newTable.getTablesForDatabase(databaseId);
-      
-      if (response.success) {
-        return response.data;
+      const result = await ServiceRegistry.newTable.getDataTypes();
+
+      if (result.success && result.data?.data_types) {
+        setDataTypes(result.data.data_types);
+        return result.data.data_types;
       } else {
-        throw new Error(response.error || "Failed to get tables for database");
+        throw new Error(result.error || "Failed to get data types");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to get tables for database");
-      return null;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to get data types";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [dataTypes]);
+
+  /**
+   * Get user tables
+   */
+  const getUserTables = useCallback(async (userId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await ServiceRegistry.newTable.getUserTables(userId);
+
+      if (result.success && result.data) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to get user tables");
+      }
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to get user tables";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
   /**
-   * Validate table existence
+   * Get supported column types
    */
-  const validateTableExists = useCallback(async (tableName: string, databaseId: number) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await ServiceRegistry.newTable.validateTableExists(tableName, databaseId);
-      
-      if (response.success) {
-        setValidationResult(response.data);
-        return response.data;
-      } else {
-        throw new Error(response.error || "Failed to validate table existence");
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to validate table existence");
-      return null;
-    } finally {
-      setLoading(false);
-    }
+  const getSupportedColumnTypes = useCallback(() => {
+    return ServiceRegistry.newTable.getSupportedColumnTypes();
   }, []);
 
   /**
@@ -220,125 +201,37 @@ export function useNewTable() {
       primary_key?: boolean;
     }>
   ) => {
-    try {
-      const response = ServiceRegistry.newTable.generateCreateTableSQL(tableName, columns);
-      
-      if (response.success) {
-        return response.data;
-      } else {
-        throw new Error(response.error || "Failed to generate SQL");
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to generate SQL");
-      return null;
-    }
+    return ServiceRegistry.newTable.generateCreateTableSQL(tableName, columns);
   }, []);
 
   /**
-   * Get supported column types
+   * Clear error state
    */
-  const getSupportedColumnTypes = useCallback(() => {
-    const response = ServiceRegistry.newTable.getSupportedColumnTypes();
-    
-    if (response.success) {
-      setSupportedTypes(response.data);
-      return response.data;
-    }
-    
-    return null;
-  }, []);
-
-  /**
-   * Get supported data types
-   */
-  const getDataTypes = useCallback(async () => {
-    setLoading(true);
+  const clearError = useCallback(() => {
     setError(null);
-
-    try {
-      const response = await ServiceRegistry.newTable.getDataTypes();
-      
-      if (response.success) {
-        setSupportedTypes(response.data);
-        return response.data;
-      } else {
-        throw new Error(response.error || "Failed to get data types");
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to get data types");
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /**
-   * Get user tables
-   */
-  const getUserTables = useCallback(async (userId: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await ServiceRegistry.newTable.getUserTables(userId);
-      
-      if (response.success) {
-        setTableData(response.data);
-        return response.data;
-      } else {
-        throw new Error(response.error || "Failed to get user tables");
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to get user tables");
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  /**
-   * Get tables by database
-   */
-  const getTablesByDatabase = useCallback(async (databaseId: number) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await ServiceRegistry.newTable.getTablesByDatabase(databaseId);
-      
-      if (response.success) {
-        return response.data;
-      } else {
-        throw new Error(response.error || "Failed to get tables by database");
-      }
-    } catch (e: any) {
-      setError(e.message || "Failed to get tables by database");
-      return null;
-    } finally {
-      setLoading(false);
-    }
   }, []);
 
   /**
    * Update user business rule
    */
-  const updateUserBusinessRule = useCallback(async (userId: string, businessRule: { business_rule: string }) => {
+  const updateUserBusinessRule = useCallback(async (userId: string, businessRule: string) => {
     setLoading(true);
     setError(null);
-    setSuccess(false);
 
     try {
-      const response = await ServiceRegistry.newTable.updateUserBusinessRule(userId, businessRule.business_rule);
-      
-      if (response.success) {
-        setSuccess(true);
-        return response.data;
+      const result = await ServiceRegistry.newTable.updateUserBusinessRule(userId, businessRule);
+
+      if (result.success) {
+        toast.success("Business rule updated successfully!");
+        return result.data;
       } else {
-        throw new Error(response.error || "Failed to update business rule");
+        throw new Error(result.error || "Failed to update business rule");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to update business rule");
-      return null;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to update business rule";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -352,70 +245,48 @@ export function useNewTable() {
     setError(null);
 
     try {
-      const response = await ServiceRegistry.newTable.getUserBusinessRule(userId);
-      
-      if (response.success) {
-        return response.data;
+      const result = await ServiceRegistry.newTable.getUserBusinessRule(userId);
+
+      if (result.success && result.data) {
+        return result.data;
       } else {
-        throw new Error(response.error || "Failed to get business rule");
+        throw new Error(result.error || "Failed to get business rule");
       }
-    } catch (e: any) {
-      setError(e.message || "Failed to get business rule");
-      return null;
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to get business rule";
+      setError(errorMessage);
+      toast.error(errorMessage);
+      throw err;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Clear functions
-  const clearError = useCallback(() => {
+  /**
+   * Clear all state
+   */
+  const clear = useCallback(() => {
     setError(null);
-  }, []);
-
-  const clearSuccess = useCallback(() => {
-    setSuccess(false);
-  }, []);
-
-  const clearValidation = useCallback(() => {
-    setValidationResult(null);
-  }, []);
-
-  const reset = useCallback(() => {
-    setError(null);
-    setSuccess(false);
-    setTableData(null);
-    setSupportedTypes(null);
-    setValidationResult(null);
+    setCreateResult(null);
   }, []);
 
   return {
-    // State
     loading,
     error,
-    success,
-    tableData,
-    supportedTypes,
-    validationResult,
-
-    // Actions
+    createResult,
+    dataTypes,
     createTable,
     getTable,
     updateTable,
     deleteTable,
-    getTablesForDatabase,
-    validateTableExists,
-    generateCreateTableSQL,
-    getSupportedColumnTypes,
     getDataTypes,
     getUserTables,
-    getTablesByDatabase,
+    getSupportedColumnTypes,
+    generateCreateTableSQL,
     updateUserBusinessRule,
     getUserBusinessRule,
-
-    // Utilities
     clearError,
-    clearSuccess,
-    clearValidation,
-    reset,
+    clear,
   };
 }
+
