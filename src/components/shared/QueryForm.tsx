@@ -25,6 +25,7 @@ interface QueryFormProps {
   enableTypewriter?: boolean;
   stopTypewriter?: boolean;
   showModelSelector?: boolean;
+  databaseSelector?: React.ReactNode;
 }
 
 export function QueryForm({
@@ -43,6 +44,7 @@ export function QueryForm({
   enableTypewriter = true,
   stopTypewriter = false,
   showModelSelector = false,
+  databaseSelector,
 }: QueryFormProps) {
   const contentEditableRef = useRef<HTMLDivElement>(null);
   const fallbackTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -362,6 +364,13 @@ export function QueryForm({
           >
             Upload
           </Button>
+        )}
+        
+        {/* Database Selector */}
+        {databaseSelector && (
+          <div>
+            {databaseSelector}
+          </div>
         )}
         
         {/* Model Selector */}

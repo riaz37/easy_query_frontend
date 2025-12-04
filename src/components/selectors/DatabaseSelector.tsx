@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -62,20 +62,19 @@ export function DatabaseSelector({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-[99px] transition-all ${className}`}
+          className={`flex items-center justify-between px-3 py-1.5 rounded-[99px] transition-all ${className}`}
           style={{
             background: 'var(--components-button-Fill, rgba(255, 255, 255, 0.12))',
             border: '1px solid var(--primary-16, rgba(19, 245, 132, 0.16))',
             color: 'white',
+            height: '36px',
+            fontSize: '12px',
           }}
         >
-          <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-emerald-400" />
-            <span className="truncate text-sm">
-              {loading ? 'Loading...' : selectedDatabase ? selectedDatabase.db_name : 'Select MSSQL Database'}
-            </span>
-          </div>
-          <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+          <span className="truncate text-xs">
+            {loading ? 'Loading...' : selectedDatabase ? selectedDatabase.db_name : 'Select Database'}
+          </span>
+          <ChevronDown className="w-3 h-3 ml-2 opacity-50" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
@@ -105,12 +104,9 @@ export function DatabaseSelector({
               className="cursor-pointer hover:bg-white/5 focus:bg-white/5 rounded-lg mx-1"
             >
               <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-400" />
-                  <span className="truncate">{db.db_name}</span>
-                </div>
+                <span className="truncate">{db.db_name}</span>
                 {selectedDatabaseId === db.db_id && (
-                  <Check className="w-4 h-4 text-emerald-400" />
+                  <Check className="w-4 h-4 text-emerald-400 ml-2" />
                 )}
               </div>
             </DropdownMenuItem>

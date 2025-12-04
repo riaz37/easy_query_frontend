@@ -16,6 +16,7 @@ interface DatabaseQueryCardProps {
   stopTypewriter?: boolean;
   progress?: number;
   currentStep?: string;
+  databaseSelector?: React.ReactNode;
 }
 
 export function DatabaseQueryCard({
@@ -26,6 +27,7 @@ export function DatabaseQueryCard({
   hasDatabase,
   className = "",
   stopTypewriter = false,
+  databaseSelector,
   ...props
 }: DatabaseQueryCardProps) {
   return (
@@ -48,6 +50,7 @@ export function DatabaseQueryCard({
           enableTypewriter={true}
           stopTypewriter={stopTypewriter}
           showModelSelector={true}
+          databaseSelector={databaseSelector}
         />
         {isExecuting && (
           <div className="mt-4 px-2">

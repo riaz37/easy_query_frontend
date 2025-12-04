@@ -13,7 +13,8 @@ import {
   RefreshCw,
   Trash2,
   Table,
-  Edit
+  Edit,
+  XIcon
 } from "lucide-react";
 import { vectorDBService, VectorDBConfig } from "@/lib/api/services/vector-db-service";
 import { useRouter } from "next/navigation";
@@ -39,6 +40,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 export default function VectorDBManagementPage() {
   const router = useRouter();
@@ -322,7 +326,7 @@ export default function VectorDBManagementPage() {
                 }}
                 className="cursor-pointer text-red-400 hover:bg-red-500/10 focus:bg-red-500/10"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-4 w-4 text-red-400" />
                 Delete Config
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -371,15 +375,26 @@ export default function VectorDBManagementPage() {
 
       {/* Manage Tables Dialog */}
       <Dialog open={isTableDialogOpen} onOpenChange={setIsTableDialogOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Manage Tables</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Manage accessible tables for <strong>{selectedConfig?.db_config?.DB_NAME}</strong>.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4 space-y-6">
+        <DialogContent className="p-0 border-0 bg-transparent modal-lg" showCloseButton={false}>
+          <div className="modal-enhanced">
+            <div className="modal-content-enhanced">
+              <DialogHeader className="modal-header-enhanced px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-2 sm:pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="modal-title-enhanced text-lg sm:text-xl flex items-center gap-3 font-barlow">
+                      Manage Tables
+                    </DialogTitle>
+                    <p className="modal-description-enhanced text-xs sm:text-sm font-public-sans">
+                      Manage accessible tables for <strong>{selectedConfig?.db_config?.DB_NAME}</strong>.
+                    </p>
+                  </div>
+                  <button onClick={() => setIsTableDialogOpen(false)} className="modal-close-button cursor-pointer flex-shrink-0 ml-2">
+                    <XIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
+                <div className="py-4 space-y-6">
             {/* Add Table Form */}
             <div className="flex gap-2">
               <div className="flex-1">
@@ -388,7 +403,7 @@ export default function VectorDBManagementPage() {
                   id="tableName"
                   value={newTableName}
                   onChange={(e) => setNewTableName(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white"
+                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
                   placeholder="Enter table name"
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTable()}
                 />
@@ -400,20 +415,25 @@ export default function VectorDBManagementPage() {
 
             {/* Tables List */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-400">Configured Tables</Label>
+              <Label className="text-sm font-medium text-gray-400 font-public-sans">Configured Tables</Label>
               {loadingTables ? (
-                <div className="text-center py-4 text-gray-500">Loading tables...</div>
+                <div className="text-center py-4 text-gray-500 font-public-sans">Loading tables...</div>
               ) : tables.length === 0 ? (
-                <div className="text-center py-8 border border-dashed border-white/10 rounded-lg text-gray-500">
-                  No tables configured yet
-                </div>
+                <EmptyState
+                  icon={Table}
+                  title="No Tables Configured"
+                  description="Add tables to make them accessible for this vector database configuration"
+                  variant="dashed"
+                  showAction={false}
+                  size="sm"
+                />
               ) : (
                 <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
                   {tables.map((table) => (
                     <div key={table} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-white/10 transition-colors">
                       <div className="flex items-center gap-3">
                         <Table className="w-4 h-4 text-emerald-400" />
-                        <span className="text-sm text-gray-200">{table}</span>
+                        <span className="text-sm text-gray-200 font-public-sans">{table}</span>
                       </div>
                       <Button 
                         variant="ghost" 
@@ -427,27 +447,40 @@ export default function VectorDBManagementPage() {
                   ))}
                 </div>
               )}
+                </div>
+                <DialogFooter className="px-0 pb-0 pt-4">
+                  <Button variant="outline" onClick={() => setIsTableDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
+                    Close
+                  </Button>
+                </DialogFooter>
+              </div>
             </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTableDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
-              Close
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle className="font-barlow text-white">{isEditMode ? "Edit Vector DB Config" : "Add New Vector DB Config"}</DialogTitle>
-            <DialogDescription className="text-gray-400 font-public-sans">
-              Configure connection details for the vector database.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
+        <DialogContent className="p-0 border-0 bg-transparent modal-lg" showCloseButton={false}>
+          <div className="modal-enhanced">
+            <div className="modal-content-enhanced">
+              <DialogHeader className="modal-header-enhanced px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-2 sm:pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="modal-title-enhanced text-lg sm:text-xl flex items-center gap-3 font-barlow">
+                      {isEditMode ? "Edit Vector DB Config" : "Add New Vector DB Config"}
+                    </DialogTitle>
+                    <p className="modal-description-enhanced text-xs sm:text-sm font-public-sans">
+                      Configure connection details for the vector database.
+                    </p>
+                  </div>
+                  <button onClick={() => setIsDialogOpen(false)} className="modal-close-button cursor-pointer flex-shrink-0 ml-2">
+                    <XIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
+                <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="dbName" className="text-white font-public-sans">Database Name *</Label>
               <Input
@@ -511,38 +544,33 @@ export default function VectorDBManagementPage() {
                 className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
                 placeholder="public"
               />
+                </div>
+                <DialogFooter className="px-0 pb-0 pt-4">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+                    {submitting ? "Saving..." : (isEditMode ? "Update Config" : "Create Config")}
+                  </Button>
+                </DialogFooter>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
-              {submitting ? "Saving..." : (isEditMode ? "Update Config" : "Create Config")}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-barlow text-white">Delete Vector DB Config</DialogTitle>
-            <DialogDescription className="text-gray-400 font-public-sans">
-              Are you sure you want to delete <strong className="text-white">{configToDelete?.db_config?.DB_NAME}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
-              Cancel
-            </Button>
-            <Button onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white font-barlow">
-              {deleting ? "Deleting..." : "Delete Config"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Vector DB Config"
+        message={`Are you sure you want to delete ${configToDelete?.db_config?.DB_NAME}? This action cannot be undone.`}
+        confirmText="Delete Config"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleting}
+      />
     </PageLayout>
   );
 }

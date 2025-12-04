@@ -17,7 +17,8 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  XIcon
 } from "lucide-react";
 import { adminService } from "@/lib/api/services/admin-service";
 import { useRouter } from "next/navigation";
@@ -45,6 +46,9 @@ import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
+import { EmptyState } from "@/components/ui/empty-state";
+import { CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 
 // Define Database type - matches API response structure
 interface DatabaseConfig {
@@ -372,19 +376,19 @@ export default function DatabaseManagementPage() {
     {
       accessorKey: "db_id",
       header: "ID",
-      cell: ({ row }) => <div className="text-gray-400">#{row.getValue("db_id")}</div>,
+      cell: ({ row }) => <div className="text-gray-400 font-public-sans">#{row.getValue("db_id")}</div>,
     },
     {
       accessorKey: "db_name",
       header: "Database Name",
-      cell: ({ row }) => <div className="font-medium text-white">{row.getValue("db_name")}</div>,
+      cell: ({ row }) => <div className="font-medium text-white font-barlow">{row.getValue("db_name")}</div>,
     },
     {
       accessorKey: "db_url",
       header: "Connection URL",
       cell: ({ row }) => {
         const url = row.getValue("db_url") as string;
-        return <div className="text-gray-400 truncate max-w-[200px]" title={url}>{url || '-'}</div>;
+        return <div className="text-gray-400 truncate max-w-[200px] font-public-sans" title={url}>{url || '-'}</div>;
       },
     },
     {
@@ -392,7 +396,7 @@ export default function DatabaseManagementPage() {
       header: "Created At",
       cell: ({ row }) => {
         const date = row.getValue("created_at") as string;
-        return <div className="text-gray-400">{date ? new Date(date).toLocaleDateString() : '-'}</div>;
+        return <div className="text-gray-400 font-public-sans">{date ? new Date(date).toLocaleDateString() : '-'}</div>;
       },
     },
     {
@@ -431,7 +435,7 @@ export default function DatabaseManagementPage() {
                 }}
                 className="cursor-pointer text-red-400 hover:bg-red-500/10 focus:bg-red-500/10"
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 h-4 w-4 text-red-400" />
                 Delete Database
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -448,7 +452,7 @@ export default function DatabaseManagementPage() {
         description="Configure MSSQL databases and learning"
         icon={<Database className="w-6 h-6 text-emerald-400" />}
         actions={
-          <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+          <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
             <Plus className="w-4 h-4 mr-2" />
             Add Database
           </Button>
@@ -463,7 +467,7 @@ export default function DatabaseManagementPage() {
               placeholder="Search databases..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
             />
           </div>
           <Button variant="outline" size="icon" onClick={fetchDatabases} className="ml-2 border-white/10 text-gray-400 hover:text-white hover:bg-white/5">
@@ -480,96 +484,115 @@ export default function DatabaseManagementPage() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{isEditMode ? "Edit Database" : "Add New Database"}</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Configure connection details for the MSSQL database.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="dbName">Database Name *</Label>
-              <Input
-                id="dbName"
-                value={currentDb.db_name || ""}
-                onChange={(e) => setCurrentDb({ ...currentDb, db_name: e.target.value })}
-                className="bg-white/5 border-white/10 text-white"
-                placeholder="e.g. SalesDB"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dbUrl">Connection URL</Label>
-              <Input
-                id="dbUrl"
-                value={currentDb.db_url || ""}
-                onChange={(e) => setCurrentDb({ ...currentDb, db_url: e.target.value })}
-                className="bg-white/5 border-white/10 text-white"
-                placeholder="mssql://user:pass@host:port/db"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="businessRule">Business Rules</Label>
-              <Textarea
-                id="businessRule"
-                value={currentDb.business_rule || ""}
-                onChange={(e) => setCurrentDb({ ...currentDb, business_rule: e.target.value })}
-                className="bg-white/5 border-white/10 text-white min-h-[100px]"
-                placeholder="Describe business rules or context for this database..."
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dbFile">Configuration File (Optional)</Label>
-              <Input
-                id="dbFile"
-                type="file"
-                onChange={(e) => setDbFile(e.target.files?.[0] || null)}
-                className="bg-white/5 border-white/10 text-white cursor-pointer"
-              />
+        <DialogContent className="p-0 border-0 bg-transparent modal-lg" showCloseButton={false}>
+          <div className="modal-enhanced">
+            <div className="modal-content-enhanced">
+              <DialogHeader className="modal-header-enhanced px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-2 sm:pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="modal-title-enhanced text-lg sm:text-xl flex items-center gap-3 font-barlow">
+                      {isEditMode ? "Edit Database" : "Add New Database"}
+                    </DialogTitle>
+                    <p className="modal-description-enhanced text-xs sm:text-sm font-public-sans">
+                      Configure connection details for the MSSQL database.
+                    </p>
+                  </div>
+                  <button onClick={() => setIsDialogOpen(false)} className="modal-close-button cursor-pointer flex-shrink-0 ml-2">
+                    <XIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="dbName" className="text-white font-public-sans">Database Name *</Label>
+                    <Input
+                      id="dbName"
+                      value={currentDb.db_name || ""}
+                      onChange={(e) => setCurrentDb({ ...currentDb, db_name: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                      placeholder="e.g. SalesDB"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dbUrl" className="text-white font-public-sans">Connection URL</Label>
+                    <Input
+                      id="dbUrl"
+                      value={currentDb.db_url || ""}
+                      onChange={(e) => setCurrentDb({ ...currentDb, db_url: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                      placeholder="mssql://user:pass@host:port/db"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="businessRule" className="text-white font-public-sans">Business Rules</Label>
+                    <Textarea
+                      id="businessRule"
+                      value={currentDb.business_rule || ""}
+                      onChange={(e) => setCurrentDb({ ...currentDb, business_rule: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans min-h-[100px]"
+                      placeholder="Describe business rules or context for this database..."
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dbFile" className="text-white font-public-sans">Configuration File (Optional)</Label>
+                    <Input
+                      id="dbFile"
+                      type="file"
+                      onChange={(e) => setDbFile(e.target.files?.[0] || null)}
+                      className="bg-white/5 border-white/10 text-white cursor-pointer font-public-sans"
+                    />
+                  </div>
+                </div>
+                <DialogFooter className="px-0 pb-0 pt-4">
+                  <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+                    {submitting ? "Saving..." : (isEditMode ? "Update Database" : "Create Database")}
+                  </Button>
+                </DialogFooter>
+              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              {submitting ? "Saving..." : (isEditMode ? "Update Database" : "Create Database")}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Delete Database</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Are you sure you want to delete <strong>{dbToDelete?.db_name}</strong>? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
-              Cancel
-            </Button>
-            <Button onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
-              {deleting ? "Deleting..." : "Delete Database"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmationDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete Database"
+        message={`Are you sure you want to delete ${dbToDelete?.db_name}? This action cannot be undone.`}
+        confirmText="Delete Database"
+        cancelText="Cancel"
+        variant="destructive"
+        isLoading={deleting}
+      />
 
       {/* Sync Progress Dialog */}
       <Dialog open={isSyncProgressOpen} onOpenChange={setIsSyncProgressOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle className="font-barlow text-white">Learn Sync Progress</DialogTitle>
-            <DialogDescription className="text-gray-400 font-public-sans">
-              Syncing database: <strong className="text-white">{syncDbName}</strong>
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
+        <DialogContent className="p-0 border-0 bg-transparent modal-lg" showCloseButton={false}>
+          <div className="modal-enhanced">
+            <div className="modal-content-enhanced">
+              <DialogHeader className="modal-header-enhanced px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-2 sm:pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="modal-title-enhanced text-lg sm:text-xl flex items-center gap-3 font-barlow">
+                      Learn Sync Progress
+                    </DialogTitle>
+                    <p className="modal-description-enhanced text-xs sm:text-sm font-public-sans">
+                      Syncing database: <strong className="text-white">{syncDbName}</strong>
+                    </p>
+                  </div>
+                  <button onClick={() => setIsSyncProgressOpen(false)} className="modal-close-button cursor-pointer flex-shrink-0 ml-2">
+                    <XIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
+                <div className="space-y-4 py-4">
             {/* Status Icon and Text */}
             <div className="flex items-center gap-3">
               {syncStatus === 'pending' && <Clock className="w-5 h-5 text-gray-400" />}
@@ -625,28 +648,30 @@ export default function DatabaseManagementPage() {
               <div className="text-xs text-gray-500 font-public-sans">
                 Task ID: {syncTaskId}
               </div>
-            )}
+                )}
+                </div>
+                <DialogFooter className="px-0 pb-0 pt-4">
+                  {syncStatus === 'success' || syncStatus === 'failed' ? (
+                    <Button 
+                      onClick={() => setIsSyncProgressOpen(false)} 
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow"
+                    >
+                      Close
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsSyncProgressOpen(false)} 
+                      className="border-white/10 text-white hover:bg-white/5 font-barlow"
+                      disabled={syncStatus === 'running'}
+                    >
+                      {syncStatus === 'running' ? 'Sync in progress...' : 'Close'}
+                    </Button>
+                  )}
+                </DialogFooter>
+              </div>
+            </div>
           </div>
-
-          <DialogFooter>
-            {syncStatus === 'success' || syncStatus === 'failed' ? (
-              <Button 
-                onClick={() => setIsSyncProgressOpen(false)} 
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow"
-              >
-                Close
-              </Button>
-            ) : (
-              <Button 
-                variant="outline" 
-                onClick={() => setIsSyncProgressOpen(false)} 
-                className="border-white/10 text-white hover:bg-white/5 font-barlow"
-                disabled={syncStatus === 'running'}
-              >
-                {syncStatus === 'running' ? 'Sync in progress...' : 'Close'}
-              </Button>
-            )}
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageLayout>

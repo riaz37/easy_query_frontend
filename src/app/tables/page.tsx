@@ -9,13 +9,11 @@ export default function TablesPage() {
   return (
     <AuthenticatedRoute
       authRequiredMessage="Please log in to access database table management features."
-      className="h-screen w-full overflow-hidden"
     >
       <PageLayout 
         background={["frame", "gridframe"]} 
-        container={false} 
-        maxWidth="full"
-        className="h-screen w-full overflow-hidden"
+        maxWidth="7xl" 
+        className="min-h-screen py-6"
       >
         <TablesManager />
       </PageLayout>

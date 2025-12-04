@@ -2,12 +2,16 @@
 
 import React, { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/layout/PageLayout";
 import {
   Database,
   Settings,
   FileSpreadsheet,
   Table,
   FileText,
+  ArrowRight,
 } from "lucide-react";
 import {
   CreateTableModal,
@@ -126,59 +130,94 @@ export function TablesManager() {
 
   return (
     <div className="tables-manager-container">
-      {/* Main Content Area - Clean workspace */}
-      <div className="flex h-full">
-        {/* Content Container - Centered welcome/instructions */}
-        <div className="flex-1 flex items-center justify-center p-8">
-          <div className="max-w-2xl text-center">
-            <div className="bg-white/10 dark:bg-gray-800/20 backdrop-blur-sm border border-emerald-200/20 dark:border-emerald-800/20 rounded-xl p-8 sm:p-12">
-              <Database className="h-16 w-16 text-emerald-400 mx-auto mb-6" />
-              <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
-                Table Management
-              </h2>
-              <p className="text-slate-400 mb-8 text-lg">
-                Manage your database tables, import Excel files, and configure business rules
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
-                <button
-                  onClick={() => setShowCreateTableModal(true)}
-                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
-                >
-                  <Table className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-white font-medium mb-1">Create Tables</h3>
-                  <p className="text-slate-400 text-sm">Design and create new database tables</p>
-                </button>
-                <button
-                  onClick={() => setShowExcelImportModal(true)}
-                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
-                >
-                  <FileSpreadsheet className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-white font-medium mb-1">Excel Import</h3>
-                  <p className="text-slate-400 text-sm">Import data from Excel files to your tables</p>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowBusinessRulesModal(true);
-                    handleLoadBusinessRule();
-                  }}
-                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
-                >
-                  <FileText className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-white font-medium mb-1">Business Rules</h3>
-                  <p className="text-slate-400 text-sm">Define and manage business rules</p>
-                </button>
-                <button
-                  onClick={() => setShowYourTablesModal(true)}
-                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
-                >
-                  <Settings className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-white font-medium mb-1">Your Tables</h3>
-                  <p className="text-slate-400 text-sm">View and manage all your tables</p>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      <PageHeader 
+        title="Table Management" 
+        description="Manage your database tables, import Excel files, and configure business rules"
+        icon={<Database className="w-6 h-6 text-emerald-400" />}
+        enhancedTitle
+      />
+
+      {/* Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              <Card 
+                className="border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] cursor-pointer group bg-emerald-500/10 border-emerald-500/20"
+                onClick={() => setShowCreateTableModal(true)}
+              >
+                <CardHeader className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+                      <Table className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-gray-400 group-hover:text-white">
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white mb-1 font-barlow">Create Tables</CardTitle>
+                  <CardDescription className="text-sm text-gray-400 mb-3 font-public-sans line-clamp-2">
+                    Design and create new database tables
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card 
+                className="border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] cursor-pointer group bg-emerald-500/10 border-emerald-500/20"
+                onClick={() => setShowExcelImportModal(true)}
+              >
+                <CardHeader className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+                      <FileSpreadsheet className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-gray-400 group-hover:text-white">
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white mb-1 font-barlow">Excel Import</CardTitle>
+                  <CardDescription className="text-sm text-gray-400 mb-3 font-public-sans line-clamp-2">
+                    Import data from Excel files to your tables
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card 
+                className="border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] cursor-pointer group bg-emerald-500/10 border-emerald-500/20"
+                onClick={() => {
+                  setShowBusinessRulesModal(true);
+                  handleLoadBusinessRule();
+                }}
+              >
+                <CardHeader className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+                      <FileText className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-gray-400 group-hover:text-white">
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white mb-1 font-barlow">Business Rules</CardTitle>
+                  <CardDescription className="text-sm text-gray-400 mb-3 font-public-sans line-clamp-2">
+                    Define and manage business rules
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+              <Card 
+                className="border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] cursor-pointer group bg-emerald-500/10 border-emerald-500/20"
+                onClick={() => setShowYourTablesModal(true)}
+              >
+                <CardHeader className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="p-3 rounded-lg bg-white/5 group-hover:bg-white/10 transition-colors">
+                      <Settings className="w-6 h-6 text-emerald-400" />
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-gray-400 group-hover:text-white">
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-white mb-1 font-barlow">Your Tables</CardTitle>
+                  <CardDescription className="text-sm text-gray-400 mb-3 font-public-sans line-clamp-2">
+                    View and manage all your tables
+                  </CardDescription>
+                </CardHeader>
+              </Card>
       </div>
 
       {/* Error/Success Messages */}

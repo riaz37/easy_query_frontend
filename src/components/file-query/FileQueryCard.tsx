@@ -15,6 +15,7 @@ interface FileQueryCardProps {
   stopTypewriter?: boolean;
   progress?: number;
   currentStep?: string;
+  vectorDBSelector?: React.ReactNode;
 }
 
 export function FileQueryCard({
@@ -25,6 +26,7 @@ export function FileQueryCard({
   onExecuteClick,
   className = "",
   stopTypewriter = false,
+  vectorDBSelector,
   ...props
 }: FileQueryCardProps) {
   return (
@@ -45,6 +47,7 @@ export function FileQueryCard({
         showClearButton={false}
         enableTypewriter={true}
         stopTypewriter={stopTypewriter}
+        databaseSelector={vectorDBSelector}
       />
       {isExecuting && (
         <div className="mt-4 px-2">

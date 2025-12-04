@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { PageLayout, PageHeader } from "@/components/layout/PageLayout";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -16,7 +16,8 @@ import {
   Cpu,
   Check,
   X,
-  User
+  User,
+  XIcon
 } from "lucide-react";
 import { adminService } from "@/lib/api/services/admin-service";
 import { vectorDBService, VectorDBConfig } from "@/lib/api/services/vector-db-service";
@@ -45,6 +46,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { ColumnDef } from "@tanstack/react-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface UserAccess {
   user_id: string;
@@ -257,12 +259,12 @@ export default function AccessManagementPage() {
     {
       accessorKey: "name",
       header: "Resource Name",
-      cell: ({ row }) => <div className="font-medium text-white">{row.getValue("name")}</div>,
+      cell: ({ row }) => <div className="font-medium text-white font-public-sans">{row.getValue("name")}</div>,
     },
     {
       accessorKey: "id",
       header: "ID",
-      cell: ({ row }) => <div className="text-gray-400">#{row.getValue("id")}</div>,
+      cell: ({ row }) => <div className="text-gray-400 font-public-sans">#{row.getValue("id")}</div>,
     },
     {
       id: "actions",
@@ -273,9 +275,9 @@ export default function AccessManagementPage() {
             variant="ghost" 
             size="sm"
             onClick={() => handleRevokeAccess(item.type === 'MSSQL' ? 'db' : 'config', item.id)}
-            className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
+            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
           >
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Trash2 className="w-4 h-4 mr-2 text-red-400" />
             Revoke
           </Button>
         );
@@ -294,10 +296,12 @@ export default function AccessManagementPage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* User Selection Sidebar */}
         <Card className="p-4 border border-white/10 bg-white/5 backdrop-blur-sm lg:col-span-1 h-fit">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-emerald-400" />
-            Select User
-          </h3>
+          <CardHeader className="p-0 pb-4">
+            <CardTitle className="text-lg font-semibold text-white flex items-center gap-2 font-barlow">
+              <User className="w-5 h-5 text-emerald-400" />
+              Select User
+            </CardTitle>
+          </CardHeader>
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
             {users.map((user) => (
               <div
@@ -309,9 +313,9 @@ export default function AccessManagementPage() {
                     : "bg-white/5 border border-transparent text-gray-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
-                <div className="font-medium">{user.user_id}</div>
+                <div className="font-medium font-public-sans">{user.user_id}</div>
                 {user.role && (
-                  <div className="text-xs opacity-70 mt-1 capitalize">{user.role}</div>
+                  <div className="text-xs opacity-70 mt-1 capitalize font-public-sans">{user.role}</div>
                 )}
               </div>
             ))}
@@ -322,18 +326,21 @@ export default function AccessManagementPage() {
         <Card className="p-6 border border-white/10 bg-white/5 backdrop-blur-sm lg:col-span-3 min-h-[500px]">
           {selectedUser ? (
             <>
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h2 className="text-xl font-bold text-white mb-1">Access for {selectedUser}</h2>
-                  <p className="text-gray-400 text-sm">
-                    {userAccess ? `${userAccess.total_access_entries} total resources accessible` : "Loading access details..."}
-                  </p>
+              <CardHeader className="p-0 pb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl font-bold text-white mb-1 font-barlow">Access for {selectedUser}</CardTitle>
+                    <CardDescription className="text-gray-400 text-sm font-public-sans">
+                      {userAccess ? `${userAccess.total_access_entries} total resources accessible` : "Loading access details..."}
+                    </CardDescription>
+                  </div>
+                  <Button onClick={() => setIsGrantDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Grant Access
+                  </Button>
                 </div>
-                <Button onClick={() => setIsGrantDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Grant Access
-                </Button>
-              </div>
+              </CardHeader>
+              <CardContent className="p-0">
 
               <Tabs defaultValue="all" className="w-full">
                 <TabsList className="bg-white/5 border border-white/10 mb-4">
@@ -366,11 +373,13 @@ export default function AccessManagementPage() {
                   />
                 </TabsContent>
               </Tabs>
+              </CardContent>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-500">
-              <User className="w-12 h-12 mb-4 opacity-20" />
-              <p>Select a user to view and manage their access</p>
+            <div className="flex items-center justify-center h-full min-h-[400px]">
+              <p className="text-gray-400 text-center font-public-sans">
+                Select a user from the sidebar to view and manage their access
+              </p>
             </div>
           )}
         </Card>
@@ -378,15 +387,26 @@ export default function AccessManagementPage() {
 
       {/* Grant Access Dialog */}
       <Dialog open={isGrantDialogOpen} onOpenChange={setIsGrantDialogOpen}>
-        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Grant Access</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Select resources to grant access to <strong>{selectedUser}</strong>.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
+        <DialogContent className="p-0 border-0 bg-transparent modal-lg" showCloseButton={false}>
+          <div className="modal-enhanced">
+            <div className="modal-content-enhanced">
+              <DialogHeader className="modal-header-enhanced px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-2 sm:pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="modal-title-enhanced text-lg sm:text-xl flex items-center gap-3 font-barlow">
+                      Grant Access
+                    </DialogTitle>
+                    <p className="modal-description-enhanced text-xs sm:text-sm font-public-sans">
+                      Select resources to grant access to <strong>{selectedUser}</strong>.
+                    </p>
+                  </div>
+                  <button onClick={() => setIsGrantDialogOpen(false)} className="modal-close-button cursor-pointer flex-shrink-0 ml-2">
+                    <XIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </button>
+                </div>
+              </DialogHeader>
+              <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
+                <div className="py-4">
             <Tabs defaultValue="mssql" className="w-full">
               <TabsList className="bg-white/5 border border-white/10 mb-4 w-full">
                 <TabsTrigger value="mssql" className="flex-1">MSSQL Databases</TabsTrigger>
@@ -395,7 +415,14 @@ export default function AccessManagementPage() {
               
               <TabsContent value="mssql" className="max-h-[300px] overflow-y-auto space-y-2">
                 {databases.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">No databases available</p>
+                  <EmptyState
+                    icon={Database}
+                    title="No Databases Available"
+                    description="No databases are configured in the system"
+                    variant="minimal"
+                    showAction={false}
+                    size="sm"
+                  />
                 ) : (
                   databases.map(db => {
                     const hasAccess = userAccess?.db_ids?.includes(db.db_id);
@@ -415,7 +442,7 @@ export default function AccessManagementPage() {
                       >
                         <div className="flex items-center gap-3">
                           <Database className={`w-4 h-4 ${hasAccess ? "text-emerald-500" : "text-gray-400"}`} />
-                          <span className={hasAccess ? "text-emerald-200" : "text-white"}>{db.db_name}</span>
+                          <span className={`${hasAccess ? "text-emerald-200" : "text-white"} font-public-sans`}>{db.db_name}</span>
                         </div>
                         {hasAccess ? (
                           <span className="text-xs text-emerald-500 flex items-center">
@@ -436,7 +463,14 @@ export default function AccessManagementPage() {
               
               <TabsContent value="vector" className="max-h-[300px] overflow-y-auto space-y-2">
                 {vectorConfigs.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4">No vector configs available</p>
+                  <EmptyState
+                    icon={Cpu}
+                    title="No Vector Configs Available"
+                    description="No vector database configurations are set up"
+                    variant="minimal"
+                    showAction={false}
+                    size="sm"
+                  />
                 ) : (
                   vectorConfigs.map(config => {
                     const hasAccess = userAccess?.config_ids?.includes(config.db_id);
@@ -456,7 +490,7 @@ export default function AccessManagementPage() {
                       >
                         <div className="flex items-center gap-3">
                           <Cpu className={`w-4 h-4 ${hasAccess ? "text-emerald-500" : "text-gray-400"}`} />
-                          <span className={hasAccess ? "text-emerald-200" : "text-white"}>
+                          <span className={`${hasAccess ? "text-emerald-200" : "text-white"} font-public-sans`}>
                             {config.db_config?.DB_NAME || `Config #${config.db_id}`}
                           </span>
                         </div>
@@ -476,17 +510,19 @@ export default function AccessManagementPage() {
                   })
                 )}
               </TabsContent>
-            </Tabs>
+                </Tabs>
+                </div>
+                <DialogFooter className="px-0 pb-0 pt-4">
+                  <Button variant="outline" onClick={() => setIsGrantDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
+                    Cancel
+                  </Button>
+                  <Button onClick={handleGrantAccess} disabled={granting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+                    {granting ? "Granting..." : `Grant Access (${selectedDbs.length + selectedConfigs.length})`}
+                  </Button>
+                </DialogFooter>
+              </div>
+            </div>
           </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGrantDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
-              Cancel
-            </Button>
-            <Button onClick={handleGrantAccess} disabled={granting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-              {granting ? "Granting..." : `Grant Access (${selectedDbs.length + selectedConfigs.length})`}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageLayout>

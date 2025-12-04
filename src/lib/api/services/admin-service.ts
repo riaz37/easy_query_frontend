@@ -2,6 +2,7 @@ import { API_ENDPOINTS } from "../endpoints";
 import { BaseService, ServiceResponse } from "./base";
 import { CacheInvalidator } from "../cache/cache-invalidator";
 import { authService } from "./auth-service";
+import { vectorDBService } from "./vector-db-service";
 
 /**
  * Service for admin operations - user management, database management, and access control
@@ -525,17 +526,36 @@ export class AdminService extends BaseService {
   async getSystemStats(): Promise<ServiceResponse<{
     totalUsers: number;
     totalDatabases: number;
+    totalVectorDBs: number;
     totalAccessEntries: number;
     activeUsers: number;
   }>> {
     try {
-      const [usersResponse, databasesResponse] = await Promise.all([
+      const [usersResponse, databasesResponse, vectorDBResponse] = await Promise.all([
         this.getAllUsers(),
         this.getAllDatabases(),
+        vectorDBService.getVectorDBConfigs(),
       ]);
 
       const totalUsers = usersResponse.data?.length || 0;
-      const totalDatabases = databasesResponse.data?.length || 0;
+      
+      // Extract database count from configs array (API returns data in response.data.configs)
+      let totalDatabases = 0;
+      if (databasesResponse.success) {
+        if (databasesResponse.data?.configs && Array.isArray(databasesResponse.data.configs)) {
+          totalDatabases = databasesResponse.data.configs.length;
+        } else if (Array.isArray(databasesResponse.data)) {
+          totalDatabases = databasesResponse.data.length;
+        }
+      }
+
+      // Extract vector DB count from configs array
+      let totalVectorDBs = 0;
+      if (vectorDBResponse.success) {
+        if (Array.isArray(vectorDBResponse.data)) {
+          totalVectorDBs = vectorDBResponse.data.length;
+        }
+      }
 
       // Calculate total access entries (simplified - can be enhanced)
       let totalAccessEntries = 0;
@@ -556,6 +576,7 @@ export class AdminService extends BaseService {
         data: {
           totalUsers,
           totalDatabases,
+          totalVectorDBs,
           totalAccessEntries,
           activeUsers: totalUsers, // Simplified - can be enhanced with activity tracking
         },

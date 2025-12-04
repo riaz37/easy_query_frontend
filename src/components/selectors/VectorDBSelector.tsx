@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cpu, ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -56,20 +56,19 @@ export function VectorDBSelector({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className={`w-full flex items-center justify-between px-4 py-3 rounded-[99px] transition-all ${className}`}
+          className={`flex items-center justify-between px-3 py-1.5 rounded-[99px] transition-all ${className}`}
           style={{
             background: 'var(--components-button-Fill, rgba(255, 255, 255, 0.12))',
             border: '1px solid var(--primary-16, rgba(19, 245, 132, 0.16))',
             color: 'white',
+            height: '36px',
+            fontSize: '12px',
           }}
         >
-          <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-purple-400" />
-            <span className="truncate text-sm">
-              {loading ? 'Loading...' : selectedConfigName ? selectedConfigName : 'Select Vector DB Config'}
-            </span>
-          </div>
-          <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
+          <span className="truncate text-xs">
+            {loading ? 'Loading...' : selectedConfigName ? selectedConfigName : 'Select Config'}
+          </span>
+          <ChevronDown className="w-3 h-3 ml-2 opacity-50" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent 
@@ -99,17 +98,14 @@ export function VectorDBSelector({
               className="cursor-pointer hover:bg-white/5 focus:bg-white/5 rounded-lg mx-1"
             >
               <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-4 h-4 text-purple-400" />
-                  <div className="flex flex-col">
-                    <span className="truncate">{config.db_config?.DB_NAME || `Config #${config.db_id}`}</span>
-                    {config.db_config?.DB_HOST && (
-                      <span className="text-xs text-gray-500 truncate">{config.db_config.DB_HOST}</span>
-                    )}
-                  </div>
+                <div className="flex flex-col">
+                  <span className="truncate">{config.db_config?.DB_NAME || `Config #${config.db_id}`}</span>
+                  {config.db_config?.DB_HOST && (
+                    <span className="text-xs text-gray-500 truncate">{config.db_config.DB_HOST}</span>
+                  )}
                 </div>
                 {selectedConfigId === config.db_id && (
-                  <Check className="w-4 h-4 text-purple-400" />
+                  <Check className="w-4 h-4 text-emerald-400 ml-2" />
                 )}
               </div>
             </DropdownMenuItem>

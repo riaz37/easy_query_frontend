@@ -219,18 +219,6 @@ export function DatabaseQueryContent() {
         />
       </div>
 
-      {/* Database Selector */}
-      <div className="px-4 sm:px-6 lg:px-32 mb-6">
-        <DatabaseSelector
-          selectedDatabaseId={selectedDatabaseId}
-          onDatabaseSelect={(dbId, dbName) => {
-            setSelectedDatabaseId(dbId);
-            setSelectedDatabaseName(dbName);
-            toast.success(`Selected Database: ${dbName}`);
-          }}
-        />
-      </div>
-
       {/* Main Content - Full Width */}
       <div className="px-4 sm:px-6 lg:px-32 mb-16 max-sm:mb-12 sm:mb-16">
         <div className="space-y-6 max-sm:space-y-4 sm:space-y-6">
@@ -244,6 +232,16 @@ export function DatabaseQueryContent() {
             stopTypewriter={stopTypewriter}
             progress={queryProgress}
             currentStep={processingSteps[Math.min(Math.floor((queryProgress / 100) * processingSteps.length), processingSteps.length - 1)] || "Processing..."}
+            databaseSelector={
+              <DatabaseSelector
+                selectedDatabaseId={selectedDatabaseId}
+                onDatabaseSelect={(dbId, dbName) => {
+                  setSelectedDatabaseId(dbId);
+                  setSelectedDatabaseName(dbName);
+                  toast.success(`Selected Database: ${dbName}`);
+                }}
+              />
+            }
           />
         </div>
       </div>

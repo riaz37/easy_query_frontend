@@ -536,18 +536,6 @@ function FileQueryPageContent() {
           </div>
         )}
 
-        {/* Vector DB Selector - Above Query Form */}
-        <div className="px-4 sm:px-6 lg:px-32 mb-6">
-          <VectorDBSelector
-            selectedConfigId={selectedConfigId}
-            onConfigSelect={(configId, configName) => {
-              setSelectedConfigId(configId);
-              setSelectedConfigName(configName);
-              toast.success(`Selected Vector DB: ${configName}`);
-            }}
-          />
-        </div>
-
         {/* Table Toggle - Above Query Form */}
         <div className="px-4 sm:px-6 lg:px-32 mb-8">
           <UseTableToggle useTable={useTable} onToggle={setUseTable} />
@@ -573,6 +561,16 @@ function FileQueryPageContent() {
                 stopTypewriter={stopTypewriter}
                 progress={queryProgress}
                 currentStep={processingSteps[Math.min(Math.floor((queryProgress / 100) * processingSteps.length), processingSteps.length - 1)] || "Processing..."}
+                vectorDBSelector={
+                  <VectorDBSelector
+                    selectedConfigId={selectedConfigId}
+                    onConfigSelect={(configId, configName) => {
+                      setSelectedConfigId(configId);
+                      setSelectedConfigName(configName);
+                      toast.success(`Selected Vector DB: ${configName}`);
+                    }}
+                  />
+                }
               />
             </div>
 

@@ -1,10 +1,9 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Image from "next/image";
 import { useUIStore } from "@/store/uiStore";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
-import { Shield } from "lucide-react";
+import { Shield, LayoutDashboard, Database, FileText, Table2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Menu() {
@@ -14,32 +13,31 @@ export default function Menu() {
 
   const menuItems = [
     {
-      icon: "/dashboard/dashboard.svg",
       name: "Dashboard",
       path: "/",
+      iconComponent: LayoutDashboard,
     },
     {
-      icon: "/dashboard/Databased Query.svg",
       name: "Database Query",
       path: "/database-query",
+      iconComponent: Database,
     },
     {
-      icon: "/dashboard/File Query.svg",
       name: "File Query",
       path: "/file-query",
+      iconComponent: FileText,
     },
     {
-      icon: "/dashboard/Table.svg",
       name: "Tables",
       path: "/tables",
+      iconComponent: Table2,
     },
     ...(tokens?.isAdmin
       ? [
           {
-            icon: null,
             name: "Admin",
             path: "/admin",
-            isIconComponent: true,
+            iconComponent: Shield,
           },
         ]
       : []),
@@ -63,6 +61,7 @@ export default function Menu() {
         <div className="p-4 space-y-1 max-sm:p-3 max-sm:space-y-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.path;
+            const IconComponent = item.iconComponent;
 
             return (
               <Link
@@ -81,17 +80,7 @@ export default function Menu() {
                     : "text-gray-300 hover:text-green-300 menu-item-hover"
                 )}
               >
-                {item.isIconComponent ? (
-                  <Shield className="h-7 w-7 max-sm:h-8 max-sm:w-8 sm:h-7 sm:w-7 text-current" />
-                ) : item.icon ? (
-                  <Image
-                    src={item.icon}
-                    alt={item.name}
-                    width={24}
-                    height={24}
-                    className="h-7 w-7 max-sm:h-8 max-sm:w-8 sm:h-7 sm:w-7"
-                  />
-                ) : null}
+                <IconComponent className="h-7 w-7 max-sm:h-8 max-sm:w-8 sm:h-7 sm:w-7 text-current" />
                 <span className="flex-1 max-sm:text-base sm:text-sm">{item.name}</span>
               </Link>
             );
