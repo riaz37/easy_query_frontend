@@ -1,54 +1,21 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import React, { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { XIcon, Table as TableIcon } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import {
   Database,
-  Search,
-  RefreshCw,
   Settings,
   FileSpreadsheet,
   Table,
-  Eye,
-  Plus,
-  Upload,
-  BarChart3,
-  Users,
   FileText,
-  Zap,
 } from "lucide-react";
-import { Spinner } from "@/components/ui/loading";
-import { TableFlowVisualization } from "./TableFlowVisualization";
-import { useReactFlow } from "reactflow";
 import {
   CreateTableModal,
   BusinessRulesModal,
   YourTablesModal,
   ExcelImportModal,
-  AnalyticsModal,
 } from "./modals";
 import { ServiceRegistry } from "@/lib/api/services/service-registry";
-import { UserCurrentDBTableData } from "@/types/api";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { useNewTable } from "@/lib/hooks/use-new-table";
 import { safeString, safeTrim, isNonEmptyString } from "@/utils/stringUtils";
@@ -60,30 +27,15 @@ export function TablesManager() {
   // Business rules hook
   const { updateUserBusinessRule, getUserBusinessRule, loading: businessRuleLoading } = useNewTable();
 
-  // React Flow instance for zoom functionality
-  const [reactFlowInstance, setReactFlowInstance] = React.useState<any>(null);
-
-  const [tableData, setTableData] = useState<UserCurrentDBTableData | null>(
-    null
-  );
-  const [loading, setLoading] = useState(false);
-  const [settingDB, setSettingDB] = useState(false);
-  const [generatingTables, setGeneratingTables] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [dbId, setDbId] = useState<number>(1); 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("visualization");
-  const [selectedTableForViewing, setSelectedTableForViewing] =
-    useState<string>("");
-  const [openModal, setOpenModal] = useState<string | null>(null);
+  const [selectedTableForViewing, setSelectedTableForViewing] = useState<string>("");
   
   // Separate modal states
   const [showCreateTableModal, setShowCreateTableModal] = useState(false);
   const [showBusinessRulesModal, setShowBusinessRulesModal] = useState(false);
   const [showYourTablesModal, setShowYourTablesModal] = useState(false);
   const [showExcelImportModal, setShowExcelImportModal] = useState(false);
-  const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   
   // Table creation state
   const [tableName, setTableName] = useState("");
@@ -151,9 +103,7 @@ export function TablesManager() {
     setBusinessRuleSuccess(null);
 
     try {
-      const result = await updateUserBusinessRule(user?.user_id, {
-        business_rule: safeTrim(businessRule),
-      });
+      const result = await updateUserBusinessRule(user?.user_id, safeTrim(businessRule));
 
       if (result) {
         setBusinessRuleSuccess("Business rule saved successfully!");
@@ -173,267 +123,61 @@ export function TablesManager() {
     }
   };
 
-  const setCurrentDatabase = async () => {
-    if (!user?.user_id) {
-      setError("Please log in to set database");
-      return;
-    }
-
-    if (!dbId || dbId <= 0) {
-      setError("Please enter a valid database ID (must be greater than 0)");
-      return;
-    }
-
-    setSettingDB(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      await ServiceRegistry.userCurrentDB.setUserCurrentDB(
-        { db_id: dbId },
-        user.user_id
-      );
-      setSuccess(
-        `Successfully set database ID ${dbId} for user ${user.user_id}`
-      );
-      // Auto-fetch table data after setting the database
-      setTimeout(() => {
-        fetchTableData();
-      }, 1000);
-    } catch (err) {
-      console.error("Error setting current database:", err);
-      setError("Failed to set current database. Please check the database ID.");
-    } finally {
-      setSettingDB(false);
-    }
-  };
-
-  const fetchTableData = async () => {
-    if (!user?.user_id) {
-      setError("Please log in to view tables");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await ServiceRegistry.userCurrentDB.getUserCurrentDB(
-        user.user_id
-      );
-
-      // The API client already extracts the data portion, so we need to access response.data
-      const responseData = response.data || response;
-
-      // Check if db_schema has the table data (primary structure)
-      if (
-        responseData.db_schema &&
-        responseData.db_schema.matched_tables_details &&
-        Array.isArray(responseData.db_schema.matched_tables_details)
-      ) {
-        // Transform the matched_tables_details to the expected format
-        const transformedTableInfo = {
-          tables: responseData.db_schema.matched_tables_details.map(
-            (table: any) => ({
-              table_name: table.table_name || table.name || "Unknown",
-              full_name:
-                table.full_name ||
-                `dbo.${table.table_name || table.name || "unknown"}`,
-              schema: table.schema || "dbo",
-              columns: table.columns || [],
-              relationships: table.relationships || [],
-              primary_keys: table.primary_keys || [],
-              sample_data: table.sample_data || [],
-              row_count_sample: table.row_count_sample || 0,
-            })
-          ),
-          metadata: {
-            total_tables:
-              responseData.db_schema.metadata?.total_schema_tables ||
-              responseData.db_schema.schema_tables?.length ||
-              0,
-            processed_tables:
-              responseData.db_schema.matched_tables_details.length,
-            failed_tables: 0,
-            extraction_date: new Date().toISOString(),
-            sample_row_count: 0,
-            database_url: responseData.db_url || "",
-          },
-          unmatched_business_rules:
-            responseData.db_schema.unmatched_business_rules || [],
-        };
-
-        const structuredData: UserCurrentDBTableData = {
-          ...responseData,
-          table_info: transformedTableInfo,
-          // Also add the db_schema for the visualization parser
-          db_schema: responseData.db_schema,
-        };
-
-        setTableData(structuredData);
-      }
-      // Fallback: Check if db_schema has schema_tables (just table names)
-      else if (
-        responseData.db_schema &&
-        responseData.db_schema.schema_tables &&
-        Array.isArray(responseData.db_schema.schema_tables)
-      ) {
-        // Transform the schema_tables to the expected format with minimal data
-        const transformedTableInfo = {
-          tables: responseData.db_schema.schema_tables.map(
-            (tableName: string) => ({
-              table_name: tableName,
-              full_name: `dbo.${tableName}`,
-              schema: "dbo",
-              columns: [],
-              relationships: [],
-              primary_keys: [],
-              sample_data: [],
-              row_count_sample: 0,
-            })
-          ),
-          metadata: {
-            total_tables: responseData.db_schema.schema_tables.length,
-            processed_tables:
-              responseData.db_schema.matched_tables?.length || 0,
-            failed_tables: 0,
-            extraction_date: new Date().toISOString(),
-            sample_row_count: 0,
-            database_url: responseData.db_url || "",
-          },
-          unmatched_business_rules:
-            responseData.db_schema.unmatched_business_rules || [],
-        };
-
-        const structuredData: UserCurrentDBTableData = {
-          ...responseData,
-          table_info: transformedTableInfo,
-          db_schema: responseData.db_schema,
-        };
-
-        setTableData(structuredData);
-      } else {
-        setError(
-          "Table information is not available. Please generate table info first."
-        );
-        setTableData(null);
-      }
-
-      // Update the dbId state with the current database ID
-      setDbId(responseData.db_id);
-    } catch (err) {
-      console.error("Error fetching table data:", err);
-      setError(
-        "Failed to fetch table data. Please check the user ID and try again."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const generateTableInfo = async () => {
-    if (!user?.user_id) {
-      setError("Please log in to generate table info");
-      return;
-    }
-
-    setGeneratingTables(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      // For now, let's just reload the database to refresh table info
-      const response = await ServiceRegistry.database.reloadDatabase();
-      setSuccess(
-        `Database reloaded successfully. Please try loading tables again.`
-      );
-
-      // Auto-fetch table data after reloading
-      setTimeout(() => {
-        fetchTableData();
-      }, 2000);
-    } catch (err) {
-      console.error("Error reloading database:", err);
-      setError("Failed to reload database. Please try again.");
-    } finally {
-      setGeneratingTables(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.user_id) {
-      fetchTableData();
-    }
-  }, [user?.user_id]);
-
-  const filteredTables =
-    tableData?.table_info?.tables?.filter(
-      (table) =>
-        table.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        table.table_name.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || [];
-
-  // Prepare available tables for Excel to DB
-  const availableTables =
-    tableData?.table_info?.tables?.map((table) => ({
-      table_name: table.table_name,
-      full_name: table.full_name,
-      columns: (table.columns || []).map((column) => ({
-        column_name: column.name,
-        data_type: column.type,
-        is_nullable: !column.is_required,
-      })),
-    })) || [];
 
   return (
     <div className="tables-manager-container">
-      {/* Main Content Area - PageLayout handles navbar spacing */}
+      {/* Main Content Area - Clean workspace */}
       <div className="flex h-full">
-        {/* ReactFlow Container - Full width */}
-        <div className="tables-flow-container">
-          {user?.user_id && tableData ? (
-            <TableFlowVisualization 
-              rawData={tableData} 
-              onZoomIn={() => {
-                // This will be called by TableFlowVisualization to set up zoom in
-              }}
-              onZoomOut={() => {
-                // This will be called by TableFlowVisualization to set up zoom out
-              }}
-              onReactFlowInstance={(instance) => {
-                setReactFlowInstance(instance);
-              }}
-            />
-          ) : !loading && !tableData ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="bg-white/10 dark:bg-gray-800/20 backdrop-blur-sm border border-emerald-200/20 dark:border-emerald-800/20 rounded-xl p-8">
-                <div className="text-center">
-                  <Database className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No Table Data
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    Enter a user ID and click Load to fetch table information
-                  </p>
-                </div>
+        {/* Content Container - Centered welcome/instructions */}
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="max-w-2xl text-center">
+            <div className="bg-white/10 dark:bg-gray-800/20 backdrop-blur-sm border border-emerald-200/20 dark:border-emerald-800/20 rounded-xl p-8 sm:p-12">
+              <Database className="h-16 w-16 text-emerald-400 mx-auto mb-6" />
+              <h2 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
+                Table Management
+              </h2>
+              <p className="text-slate-400 mb-8 text-lg">
+                Manage your database tables, import Excel files, and configure business rules
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+                <button
+                  onClick={() => setShowCreateTableModal(true)}
+                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
+                >
+                  <Table className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-white font-medium mb-1">Create Tables</h3>
+                  <p className="text-slate-400 text-sm">Design and create new database tables</p>
+                </button>
+                <button
+                  onClick={() => setShowExcelImportModal(true)}
+                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
+                >
+                  <FileSpreadsheet className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-white font-medium mb-1">Excel Import</h3>
+                  <p className="text-slate-400 text-sm">Import data from Excel files to your tables</p>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowBusinessRulesModal(true);
+                    handleLoadBusinessRule();
+                  }}
+                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
+                >
+                  <FileText className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-white font-medium mb-1">Business Rules</h3>
+                  <p className="text-slate-400 text-sm">Define and manage business rules</p>
+                </button>
+                <button
+                  onClick={() => setShowYourTablesModal(true)}
+                  className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 hover:border-emerald-400/50 hover:bg-slate-800/70 transition-all duration-200 text-left cursor-pointer group"
+                >
+                  <Settings className="h-8 w-8 text-emerald-400 mb-2 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-white font-medium mb-1">Your Tables</h3>
+                  <p className="text-slate-400 text-sm">View and manage all your tables</p>
+                </button>
               </div>
             </div>
-          ) : tableData && filteredTables.length === 0 && searchTerm ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="bg-white/10 dark:bg-gray-800/20 backdrop-blur-sm border border-emerald-200/20 dark:border-emerald-800/20 rounded-xl p-8">
-                <div className="text-center">
-                  <Search className="h-12 w-12 text-emerald-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No Tables Found
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300">
-                    No tables match your search criteria: "{searchTerm}"
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          </div>
         </div>
       </div>
 
@@ -448,181 +192,6 @@ export function TablesManager() {
         </div>
       )}
 
-      {/* Bottom Icon Controls */}
-      {user?.user_id && (
-        <div className="fixed bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="backdrop-blur-sm p-2 sm:p-4 shadow-2xl tables-bottom-controls" 
-               style={{
-                 background: "rgba(255, 255, 255, 0.03)",
-                 borderRadius: "24px",
-                 border: "1.5px solid",
-                 borderImageSource: "linear-gradient(158.39deg, rgba(255, 255, 255, 0.06) 14.19%, rgba(255, 255, 255, 0) 50.59%, rgba(255, 255, 255, 0) 68.79%, rgba(255, 255, 255, 0.015) 105.18%)"
-               }}>
-            <TooltipProvider>
-            <div className="relative">
-              <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto max-w-[calc(100vw-8rem)] sm:max-w-[calc(100vw-10rem)] scrollbar-hide py-1">
-              {/* Zoom In */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      if (reactFlowInstance) {
-                        reactFlowInstance.zoomIn();
-                      }
-                    }}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/zoomin.svg" alt="Zoom In" className="h-4 w-4 sm:h-6 sm:w-6" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Zoom In</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Zoom Out */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                      <Button
-                    onClick={() => {
-                      if (reactFlowInstance) {
-                        reactFlowInstance.zoomOut();
-                      }
-                    }}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/zoomout.svg" alt="Zoom Out" className="h-4 w-4 sm:h-6 sm:w-6" />
-                      </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Zoom Out</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Create Table Modal */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setShowCreateTableModal(true)}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/Table.svg" alt="Add Table" className="h-4 w-4 sm:h-6 sm:w-6" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Add Table</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Excel Import Modal */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setShowExcelImportModal(true)}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/excel.svg" alt="Excel Import" className="h-4 w-4 sm:h-6 sm:w-6" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Excel Import</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Business Rules Modal */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      setShowBusinessRulesModal(true);
-                      // Start loading inside the modal
-                      handleLoadBusinessRule();
-                    }}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/business.svg" alt="Business Rules" className="h-4 w-4 sm:h-6 sm:w-6" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Business Rules</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Settings - Your Tables Modal */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => setShowYourTablesModal(true)}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/Setting.svg" alt="Your Tables" className="h-4 w-4 sm:h-6 sm:w-6" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Your Tables</p>
-                </TooltipContent>
-              </Tooltip>
-
-              {/* Fit View */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      if (reactFlowInstance) {
-                        reactFlowInstance.fitView();
-                      }
-                    }}
-                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full text-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 cursor-pointer flex-shrink-0"
-                    size="icon"
-                    style={{
-                      background: "var(--components-button-Fill, rgba(255, 255, 255, 0.12))",
-                      border: "1px solid var(--primary-16, rgba(19, 245, 132, 0.16))"
-                    }}
-                  >
-                    <img src="/tables/fitview.svg" alt="Fit View" className="h-4 w-4 sm:h-6 sm:w-6" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Fit View</p>
-                </TooltipContent>
-              </Tooltip>
-
-                  </div>
-              </div>
-            </TooltipProvider>
-          </div>
-        </div>
-      )}
 
       {/* Separate Modals */}
       <CreateTableModal
@@ -634,7 +203,7 @@ export function TablesManager() {
         setSchema={setSchema}
         columns={columns}
         dataTypes={null}
-        loading={loading}
+        loading={false}
         onAddColumn={() => {
           setColumns([
             ...columns,
@@ -662,7 +231,6 @@ export function TablesManager() {
         onGetDataTypeOptions={() => []}
         onSubmit={async (modalData) => {
           try {
-            setLoading(true);
             setError(null);
             
             // Validate input
@@ -701,22 +269,18 @@ export function TablesManager() {
               setTableName("");
               setSchema("dbo");
               setColumns([{
-                name: "column_1",
+                name: "id",
                 data_type: "INT",
                 nullable: false,
                 is_primary: true,
                 is_identity: true,
               }]);
-              // Refresh table data
-              await setCurrentDatabase();
             } else {
               setError(result.error || "Failed to create table");
             }
           } catch (error) {
             console.error("Failed to create table:", error);
             setError("Failed to create table. Please try again.");
-          } finally {
-            setLoading(false);
           }
         }}
       />
@@ -745,17 +309,11 @@ export function TablesManager() {
         open={showExcelImportModal}
         onOpenChange={setShowExcelImportModal}
         userId={user?.user_id || ""}
-        availableTables={availableTables}
+        availableTables={[]}
         onViewTableData={(tableName) => {
           setSelectedTableForViewing(tableName);
           setShowExcelImportModal(false);
         }}
-      />
-
-      <AnalyticsModal
-        open={showAnalyticsModal}
-        onOpenChange={setShowAnalyticsModal}
-        tableData={tableData}
       />
 
       <YourTablesModal
