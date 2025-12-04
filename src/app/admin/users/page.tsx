@@ -13,7 +13,8 @@ import {
   Shield, 
   User as UserIcon,
   Key,
-  Trash2
+  Database,
+  RefreshCw
 } from "lucide-react";
 import { adminService } from "@/lib/api/services/admin-service";
 import { useRouter } from "next/navigation";
@@ -170,7 +171,7 @@ export default function UserManagementPage() {
     {
       accessorKey: "user_id",
       header: "User ID",
-      cell: ({ row }) => <div className="font-medium text-white">{row.getValue("user_id")}</div>,
+      cell: ({ row }) => <div className="font-medium text-white font-barlow">{row.getValue("user_id")}</div>,
     },
     {
       accessorKey: "role",
@@ -181,7 +182,7 @@ export default function UserManagementPage() {
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             role === 'admin' 
               ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' 
-              : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
           }`}>
             {role === 'admin' ? <Shield className="w-3 h-3 mr-1" /> : <UserIcon className="w-3 h-3 mr-1" />}
             {role || 'user'}
@@ -194,7 +195,7 @@ export default function UserManagementPage() {
       header: "Created At",
       cell: ({ row }) => {
         const date = row.getValue("created_at") as string;
-        return <div className="text-gray-400">{date ? new Date(date).toLocaleDateString() : '-'}</div>;
+        return <div className="text-gray-400 font-public-sans">{date ? new Date(date).toLocaleDateString() : '-'}</div>;
       },
     },
     {
@@ -204,26 +205,26 @@ export default function UserManagementPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-white/5">
                 <span className="sr-only">Open menu</span>
                 <MoreVertical className="h-4 w-4 text-gray-400" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#1a1f2e] border-white/10 text-white">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-white font-barlow">Actions</DropdownMenuLabel>
               <DropdownMenuItem 
                 onClick={() => {
                   setSelectedUser(user);
                   setIsPasswordDialogOpen(true);
                 }}
-                className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                className="cursor-pointer hover:bg-white/5 focus:bg-white/5 text-white"
               >
                 <Key className="mr-2 h-4 w-4" />
                 Change Password
               </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => handleToggleRole(user)}
-                className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                className="cursor-pointer hover:bg-white/5 focus:bg-white/5 text-white"
               >
                 <Shield className="mr-2 h-4 w-4" />
                 {user.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}
@@ -231,7 +232,7 @@ export default function UserManagementPage() {
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem 
                 onClick={() => router.push(`/admin/access?userId=${user.user_id}`)}
-                className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                className="cursor-pointer hover:bg-white/5 focus:bg-white/5 text-white"
               >
                 <Database className="mr-2 h-4 w-4" />
                 Manage Access
@@ -243,73 +244,70 @@ export default function UserManagementPage() {
     },
   ];
 
-  // Import Database icon for the dropdown menu
-  const { Database } = require("lucide-react");
-
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
       <PageHeader 
         title="User Management" 
         description="Create users, manage roles and passwords"
-        icon={<Users className="w-6 h-6 text-blue-400" />}
+        icon={<Users className="w-6 h-6 text-emerald-400" />}
         actions={
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
                 <Plus className="w-4 h-4 mr-2" />
                 Add User
               </Button>
             </DialogTrigger>
             <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Create New User</DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogTitle className="font-barlow text-white">Create New User</DialogTitle>
+                <DialogDescription className="text-gray-400 font-public-sans">
                   Add a new user to the system. They will be able to log in immediately.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="userId">User ID</Label>
+                  <Label htmlFor="userId" className="text-white font-public-sans">User ID</Label>
                   <Input
                     id="userId"
                     value={newUser.userId}
                     onChange={(e) => setNewUser({ ...newUser, userId: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
                     placeholder="jdoe"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-white font-public-sans">Password</Label>
                   <Input
                     id="password"
                     type="password"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                    className="bg-white/5 border-white/10 text-white"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
                     placeholder="********"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="role">Role</Label>
+                  <Label htmlFor="role" className="text-white font-public-sans">Role</Label>
                   <Select 
                     value={newUser.role} 
                     onValueChange={(value: "admin" | "user") => setNewUser({ ...newUser, role: value })}
                   >
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white">
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white font-public-sans">
                       <SelectValue placeholder="Select role" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1f2e] border-white/10 text-white">
-                      <SelectItem value="user">User</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="user" className="font-public-sans">User</SelectItem>
+                      <SelectItem value="admin" className="font-public-sans">Admin</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
                   Cancel
                 </Button>
-                <Button onClick={handleCreateUser} disabled={creatingUser} className="bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={handleCreateUser} disabled={creatingUser} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
                   {creatingUser ? "Creating..." : "Create User"}
                 </Button>
               </DialogFooter>
@@ -326,9 +324,17 @@ export default function UserManagementPage() {
               placeholder="Search users..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
             />
           </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={fetchUsers} 
+            className="ml-2 border-white/10 text-gray-400 hover:text-white hover:bg-white/5"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
         </div>
 
         <DataTable 
@@ -342,29 +348,29 @@ export default function UserManagementPage() {
       <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
         <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Change Password</DialogTitle>
-            <DialogDescription className="text-gray-400">
-              Set a new password for user <strong>{selectedUser?.user_id}</strong>.
+            <DialogTitle className="font-barlow text-white">Change Password</DialogTitle>
+            <DialogDescription className="text-gray-400 font-public-sans">
+              Set a new password for user <strong className="text-white">{selectedUser?.user_id}</strong>.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword" className="text-white font-public-sans">New Password</Label>
               <Input
                 id="newPassword"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="bg-white/5 border-white/10 text-white"
+                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
                 placeholder="At least 8 characters"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
+            <Button variant="outline" onClick={() => setIsPasswordDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
               Cancel
             </Button>
-            <Button onClick={handleChangePassword} disabled={changingPassword} className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button onClick={handleChangePassword} disabled={changingPassword} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
               {changingPassword ? "Updating..." : "Update Password"}
             </Button>
           </DialogFooter>

@@ -45,6 +45,86 @@ export class VectorDBService extends BaseService {
   }
 
   /**
+   * Create a new vector database configuration
+   */
+  async createVectorDBConfig(config: {
+    DB_HOST: string;
+    DB_PORT: number;
+    DB_NAME: string;
+    DB_USER: string;
+    DB_PASSWORD: string;
+    schema: string;
+  }): Promise<ServiceResponse<any>> {
+    this.validateRequired(config, ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'schema']);
+    
+    if (config.DB_PORT <= 0 || config.DB_PORT > 65535) {
+      throw this.createValidationError('DB_PORT must be a valid port number (1-65535)');
+    }
+
+    const result = await this.post<any>(
+      API_ENDPOINTS.FMS_DB_CONFIG_CREATE,
+      {
+        db_config: config,
+      }
+    );
+    
+    if (result.success) {
+      CacheInvalidator.invalidateDatabases();
+    }
+    
+    return result;
+  }
+
+  /**
+   * Update a vector database configuration
+   */
+  async updateVectorDBConfig(
+    dbId: number,
+    config: {
+      DB_HOST?: string;
+      DB_PORT?: number;
+      DB_NAME?: string;
+      DB_USER?: string;
+      DB_PASSWORD?: string;
+      schema?: string;
+    }
+  ): Promise<ServiceResponse<any>> {
+    this.validateRequired({ dbId }, ['dbId']);
+
+    if (config.DB_PORT && (config.DB_PORT <= 0 || config.DB_PORT > 65535)) {
+      throw this.createValidationError('DB_PORT must be a valid port number (1-65535)');
+    }
+
+    const result = await this.put<any>(
+      API_ENDPOINTS.FMS_DB_CONFIG_UPDATE(dbId),
+      {
+        db_config: config,
+      }
+    );
+    
+    if (result.success) {
+      CacheInvalidator.invalidateDatabases();
+    }
+    
+    return result;
+  }
+
+  /**
+   * Delete a vector database configuration
+   */
+  async deleteVectorDBConfig(dbId: number): Promise<ServiceResponse<void>> {
+    this.validateRequired({ dbId }, ['dbId']);
+
+    const result = await this.delete<void>(API_ENDPOINTS.FMS_DB_CONFIG_DELETE(dbId));
+    
+    if (result.success) {
+      CacheInvalidator.invalidateDatabases();
+    }
+    
+    return result;
+  }
+
+  /**
    * Get available table names for a config
    * NOTE: Updated to use configId instead of userId - requires configId parameter
    */

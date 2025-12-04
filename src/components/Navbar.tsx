@@ -1,43 +1,22 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
-import { Bell, User, LogIn, Settings, Shield } from "lucide-react";
+import { Bell, LogIn } from "lucide-react";
 import { useUIStore } from "@/store/uiStore";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
 
 export default function Navbar() {
   const { showSidebar, setShowSidebar } = useUIStore();
-  const { isAuthenticated, user, logout, tokens } = useAuthContext();
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuthContext();
 
   const handleMenuClick = () => {
     setShowSidebar(!showSidebar);
   };
 
-  const handleProfileDropdownChange = (open: boolean) => {
-    setIsProfileDropdownOpen(open);
-  };
-
   return (
     <>
-      {/* Profile Dropdown Backdrop */}
-      {isProfileDropdownOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-          onClick={() => setIsProfileDropdownOpen(false)}
-        />
-      )}
-
       <nav className="fixed left-4 right-4 top-6 z-50 backdrop-blur-xl rounded-full flex items-center justify-between shadow-2xl max-w-7xl mx-auto bg-white/5 border border-white/10 shadow-black/20 navbar-container
                       max-sm:left-2 max-sm:right-2 max-sm:top-4 max-sm:rounded-2xl
                       sm:left-4 sm:right-4 sm:top-6 sm:rounded-full
@@ -46,11 +25,11 @@ export default function Navbar() {
                       xl:left-4 xl:right-4 xl:top-6 xl:rounded-full">
       {/* Left side - Logo and Menu */}
       <div className="flex items-center gap-6 max-sm:gap-3 sm:gap-6">
-        {/* ESAP Logo */}
+        {/* EasyQuery Logo */}
         <div className="flex items-center gap-2 px-4 py-2 rounded-full max-sm:px-2 max-sm:py-1 sm:px-4 sm:py-2">
           <Image
             src="/logo/logo.svg"
-            alt="ESAP"
+            alt="EasyQuery"
             width={120}
             height={40}
             className="h-8 w-auto max-sm:h-6 max-sm:w-auto sm:h-8 sm:w-auto"
@@ -109,49 +88,23 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* User Avatar */}
+        {/* Logout Button */}
         {isAuthenticated && user ? (
-          <DropdownMenu open={isProfileDropdownOpen} onOpenChange={handleProfileDropdownChange}>
-            <DropdownMenuTrigger asChild>
-              <div className="w-10 h-10 rounded-full flex items-center justify-center transition-colors cursor-pointer navbar-icon-button
-                             max-sm:w-8 max-sm:h-8
-                             sm:w-10 sm:h-10">
-                <User className="w-5 h-5 text-white/90 max-sm:w-4 max-sm:h-4 sm:w-5 sm:h-5" />
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              side="bottom"
-              
-              className="navbar-dropdown-content w-56 border-0 p-0 max-sm:w-48 sm:w-56 sm:!mt-[20px]"
-            >
-              <div className="px-2 py-1">
-                {tokens?.isAdmin && (
-                  <DropdownMenuItem
-                    onClick={() => (window.location.href = "/admin")}
-                    className="navbar-dropdown-item text-white cursor-pointer"
-                  >
-                     <Shield className="w-4 h-4 mr-2 max-sm:w-5 max-sm:h-5 sm:w-4 sm:h-4" />
-                    <span className="max-sm:text-base sm:text-sm">Admin</span>
-                  </DropdownMenuItem>
-                )}
-
-                <DropdownMenuItem
-                  onClick={logout}
-                  className="navbar-dropdown-item text-white cursor-pointer"
-                >
-                  <Image
-                    src="/dashboard/logout.svg"
-                    alt="Log Out"
-                    width={16}
-                    height={16}
-                    className="w-4 h-4 max-sm:w-5 max-sm:h-5 sm:w-4 sm:h-4"
-                  />
-                  <span className="max-sm:text-base sm:text-sm">Log Out</span>
-                </DropdownMenuItem>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            onClick={logout}
+            className="navbar-signin-button transition-colors cursor-pointer text-white/90 hover:text-white hover:bg-gray-600/50
+                       max-sm:px-3 max-sm:py-2 max-sm:text-sm
+                       sm:px-4 sm:py-2 sm:text-sm"
+          >
+            <Image
+              src="/dashboard/logout.svg"
+              alt="Log Out"
+              width={16}
+              height={16}
+              className="w-4 h-4 mr-2 max-sm:w-3 max-sm:h-3 max-sm:mr-1 sm:w-4 sm:h-4 sm:mr-2"
+            />
+            <span className="max-sm:text-xs sm:text-sm">Log Out</span>
+          </Button>
         ) : (
           <Button
             onClick={() => (window.location.href = "/auth")}

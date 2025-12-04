@@ -6,7 +6,7 @@ import { useDatabaseOperations } from "@/lib/hooks";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { useRouter } from "next/navigation";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { ESAPBrandLoader } from "@/components/ui/loading";
+import { EasyQueryBrandLoader } from "@/components/ui/loading";
 
 function DashboardPageContent() {
   const [showOpeningAnimation, setShowOpeningAnimation] = useState(false);
@@ -67,7 +67,7 @@ export default function DashboardPage() {
       >
         <div className="w-full max-w-4xl mx-auto">
           <div className="text-center py-6 sm:py-8">
-            <ESAPBrandLoader size="xl" className="mx-auto mb-4" />
+            <EasyQueryBrandLoader size="xl" className="mx-auto mb-4" />
             <p className="text-base sm:text-lg font-medium text-white">
               Loading...
             </p>
@@ -87,7 +87,7 @@ export default function DashboardPage() {
       >
         <div className="w-full max-w-4xl mx-auto">
           <div className="text-center py-6 sm:py-8">
-            <ESAPBrandLoader size="xl" className="mx-auto mb-4" />
+            <EasyQueryBrandLoader size="xl" className="mx-auto mb-4" />
             <p className="text-base sm:text-lg font-medium text-white">
               Redirecting to signin...
             </p>

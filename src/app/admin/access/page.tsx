@@ -55,8 +55,12 @@ interface UserAccess {
 }
 
 interface DatabaseConfig {
-  id: number;
+  db_id: number;
   db_name: string;
+  db_url?: string;
+  business_rule?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export default function AccessManagementPage() {
@@ -119,12 +123,20 @@ export default function AccessManagementPage() {
         vectorDBService.getVectorDBConfigs()
       ]);
 
-      if (dbResponse.success && Array.isArray(dbResponse.data)) {
+      // The API returns data in response.data.configs array for databases
+      if (dbResponse.success && dbResponse.data?.configs && Array.isArray(dbResponse.data.configs)) {
+        setDatabases(dbResponse.data.configs);
+      } else if (dbResponse.success && Array.isArray(dbResponse.data)) {
+        // Fallback: if configs doesn't exist, try direct array
         setDatabases(dbResponse.data);
+      } else {
+        setDatabases([]);
       }
       
       if (configResponse.success && Array.isArray(configResponse.data)) {
         setVectorConfigs(configResponse.data);
+      } else {
+        setVectorConfigs([]);
       }
     } catch (error) {
       console.error("Failed to fetch resources:", error);
@@ -215,7 +227,7 @@ export default function AccessManagementPage() {
 
   // Prepare data for tables
   const dbAccessData = userAccess?.db_ids?.map(id => {
-    const db = databases.find(d => d.id === id);
+    const db = databases.find(d => d.db_id === id);
     return { id, name: db?.db_name || `Database #${id}`, type: 'MSSQL' };
   }) || [];
 
@@ -234,7 +246,7 @@ export default function AccessManagementPage() {
           <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
             type === 'MSSQL' 
               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-              : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
           }`}>
             {type === 'MSSQL' ? <Database className="w-3 h-3 mr-1" /> : <Cpu className="w-3 h-3 mr-1" />}
             {type}
@@ -261,7 +273,7 @@ export default function AccessManagementPage() {
             variant="ghost" 
             size="sm"
             onClick={() => handleRevokeAccess(item.type === 'MSSQL' ? 'db' : 'config', item.id)}
-            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
           >
             <Trash2 className="w-4 h-4 mr-2" />
             Revoke
@@ -276,14 +288,14 @@ export default function AccessManagementPage() {
       <PageHeader 
         title="Access Management" 
         description="Manage user access to databases and vector configurations"
-        icon={<Lock className="w-6 h-6 text-amber-400" />}
+        icon={<Lock className="w-6 h-6 text-emerald-400" />}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* User Selection Sidebar */}
         <Card className="p-4 border border-white/10 bg-white/5 backdrop-blur-sm lg:col-span-1 h-fit">
           <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-blue-400" />
+            <User className="w-5 h-5 text-emerald-400" />
             Select User
           </h3>
           <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
@@ -293,7 +305,7 @@ export default function AccessManagementPage() {
                 onClick={() => setSelectedUser(user.user_id)}
                 className={`p-3 rounded-lg cursor-pointer transition-all ${
                   selectedUser === user.user_id
-                    ? "bg-blue-600/20 border border-blue-500/50 text-white"
+                    ? "bg-emerald-600/20 border border-emerald-500/50 text-white"
                     : "bg-white/5 border border-transparent text-gray-400 hover:bg-white/10 hover:text-white"
                 }`}
               >
@@ -317,7 +329,7 @@ export default function AccessManagementPage() {
                     {userAccess ? `${userAccess.total_access_entries} total resources accessible` : "Loading access details..."}
                   </p>
                 </div>
-                <Button onClick={() => setIsGrantDialogOpen(true)} className="bg-amber-600 hover:bg-amber-700 text-white">
+                <Button onClick={() => setIsGrantDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                   <Plus className="w-4 h-4 mr-2" />
                   Grant Access
                 </Button>
@@ -386,20 +398,20 @@ export default function AccessManagementPage() {
                   <p className="text-center text-gray-500 py-4">No databases available</p>
                 ) : (
                   databases.map(db => {
-                    const hasAccess = userAccess?.db_ids?.includes(db.id);
-                    const isSelected = selectedDbs.includes(db.id);
+                    const hasAccess = userAccess?.db_ids?.includes(db.db_id);
+                    const isSelected = selectedDbs.includes(db.db_id);
                     
                     return (
                       <div 
-                        key={db.id}
+                        key={db.db_id}
                         className={`flex items-center justify-between p-3 rounded-lg border ${
                           hasAccess 
                             ? "bg-emerald-500/5 border-emerald-500/20 opacity-50 cursor-not-allowed" 
                             : isSelected
-                              ? "bg-blue-500/10 border-blue-500/30 cursor-pointer"
+                              ? "bg-emerald-500/10 border-emerald-500/30 cursor-pointer"
                               : "bg-white/5 border-white/5 hover:bg-white/10 cursor-pointer"
                         }`}
-                        onClick={() => !hasAccess && toggleDbSelection(db.id)}
+                        onClick={() => !hasAccess && toggleDbSelection(db.db_id)}
                       >
                         <div className="flex items-center gap-3">
                           <Database className={`w-4 h-4 ${hasAccess ? "text-emerald-500" : "text-gray-400"}`} />
@@ -412,8 +424,8 @@ export default function AccessManagementPage() {
                         ) : (
                           <Checkbox 
                             checked={isSelected} 
-                            onCheckedChange={() => toggleDbSelection(db.id)}
-                            className="border-white/20 data-[state=checked]:bg-blue-600"
+                            onCheckedChange={() => toggleDbSelection(db.db_id)}
+                            className="border-white/20 data-[state=checked]:bg-emerald-600"
                           />
                         )}
                       </div>
@@ -435,28 +447,28 @@ export default function AccessManagementPage() {
                         key={config.db_id}
                         className={`flex items-center justify-between p-3 rounded-lg border ${
                           hasAccess 
-                            ? "bg-purple-500/5 border-purple-500/20 opacity-50 cursor-not-allowed" 
+                            ? "bg-emerald-500/5 border-emerald-500/20 opacity-50 cursor-not-allowed" 
                             : isSelected
-                              ? "bg-blue-500/10 border-blue-500/30 cursor-pointer"
+                              ? "bg-emerald-500/10 border-emerald-500/30 cursor-pointer"
                               : "bg-white/5 border-white/5 hover:bg-white/10 cursor-pointer"
                         }`}
                         onClick={() => !hasAccess && toggleConfigSelection(config.db_id)}
                       >
                         <div className="flex items-center gap-3">
-                          <Cpu className={`w-4 h-4 ${hasAccess ? "text-purple-500" : "text-gray-400"}`} />
-                          <span className={hasAccess ? "text-purple-200" : "text-white"}>
+                          <Cpu className={`w-4 h-4 ${hasAccess ? "text-emerald-500" : "text-gray-400"}`} />
+                          <span className={hasAccess ? "text-emerald-200" : "text-white"}>
                             {config.db_config?.DB_NAME || `Config #${config.db_id}`}
                           </span>
                         </div>
                         {hasAccess ? (
-                          <span className="text-xs text-purple-500 flex items-center">
+                          <span className="text-xs text-emerald-500 flex items-center">
                             <Check className="w-3 h-3 mr-1" /> Granted
                           </span>
                         ) : (
                           <Checkbox 
                             checked={isSelected} 
                             onCheckedChange={() => toggleConfigSelection(config.db_id)}
-                            className="border-white/20 data-[state=checked]:bg-blue-600"
+                            className="border-white/20 data-[state=checked]:bg-emerald-600"
                           />
                         )}
                       </div>
@@ -471,7 +483,7 @@ export default function AccessManagementPage() {
             <Button variant="outline" onClick={() => setIsGrantDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
               Cancel
             </Button>
-            <Button onClick={handleGrantAccess} disabled={granting} className="bg-amber-600 hover:bg-amber-700 text-white">
+            <Button onClick={handleGrantAccess} disabled={granting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               {granting ? "Granting..." : `Grant Access (${selectedDbs.length + selectedConfigs.length})`}
             </Button>
           </DialogFooter>

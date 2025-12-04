@@ -3,11 +3,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { useUIStore } from "@/store/uiStore";
+import { useAuthContext } from "@/components/providers/AuthContextProvider";
+import { Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Menu() {
   const pathname = usePathname();
   const { setShowSidebar } = useUIStore();
+  const { tokens } = useAuthContext();
 
   const menuItems = [
     {
@@ -30,16 +33,16 @@ export default function Menu() {
       name: "Tables",
       path: "/tables",
     },
-    {
-      icon: "/dashboard/Company.svg",
-      name: "Company Structure",
-      path: "/company-structure",
-    },
-    {
-      icon: "/dashboard/user.svg",
-      name: "Users",
-      path: "/users",
-    },
+    ...(tokens?.isAdmin
+      ? [
+          {
+            icon: null,
+            name: "Admin",
+            path: "/admin",
+            isIconComponent: true,
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -78,13 +81,17 @@ export default function Menu() {
                     : "text-gray-300 hover:text-green-300 menu-item-hover"
                 )}
               >
-                <Image
-                  src={item.icon}
-                  alt={item.name}
-                  width={24}
-                  height={24}
-                  className="h-7 w-7 max-sm:h-8 max-sm:w-8 sm:h-7 sm:w-7"
-                />
+                {item.isIconComponent ? (
+                  <Shield className="h-7 w-7 max-sm:h-8 max-sm:w-8 sm:h-7 sm:w-7 text-current" />
+                ) : item.icon ? (
+                  <Image
+                    src={item.icon}
+                    alt={item.name}
+                    width={24}
+                    height={24}
+                    className="h-7 w-7 max-sm:h-8 max-sm:w-8 sm:h-7 sm:w-7"
+                  />
+                ) : null}
                 <span className="flex-1 max-sm:text-base sm:text-sm">{item.name}</span>
               </Link>
             );

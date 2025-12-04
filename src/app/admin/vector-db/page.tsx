@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Trash2,
   Table,
-  List
+  Edit
 } from "lucide-react";
 import { vectorDBService, VectorDBConfig } from "@/lib/api/services/vector-db-service";
 import { useRouter } from "next/navigation";
@@ -47,6 +47,24 @@ export default function VectorDBManagementPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   
+  // Create/Edit State
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentConfig, setCurrentConfig] = useState<Partial<{
+    DB_HOST: string;
+    DB_PORT: number;
+    DB_NAME: string;
+    DB_USER: string;
+    DB_PASSWORD: string;
+    schema: string;
+  }>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  // Delete State
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [configToDelete, setConfigToDelete] = useState<VectorDBConfig | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Table Management State
   const [isTableDialogOpen, setIsTableDialogOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<VectorDBConfig | null>(null);
@@ -71,6 +89,7 @@ export default function VectorDBManagementPage() {
     try {
       setLoading(true);
       const response = await vectorDBService.getVectorDBConfigs();
+      // The API returns data in response.data array
       if (response.success && Array.isArray(response.data)) {
         setConfigs(response.data);
       } else {
@@ -146,6 +165,98 @@ export default function VectorDBManagementPage() {
     }
   };
 
+  const handleSubmit = async () => {
+    if (!currentConfig.DB_NAME || !currentConfig.DB_HOST || !currentConfig.DB_USER || !currentConfig.DB_PASSWORD || !currentConfig.schema) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    if (!currentConfig.DB_PORT || currentConfig.DB_PORT <= 0 || currentConfig.DB_PORT > 65535) {
+      toast.error("Port must be a valid number between 1 and 65535");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      const config = {
+        DB_HOST: currentConfig.DB_HOST!,
+        DB_PORT: currentConfig.DB_PORT!,
+        DB_NAME: currentConfig.DB_NAME!,
+        DB_USER: currentConfig.DB_USER!,
+        DB_PASSWORD: currentConfig.DB_PASSWORD!,
+        schema: currentConfig.schema!,
+      };
+
+      let response;
+      if (isEditMode && selectedConfig) {
+        response = await vectorDBService.updateVectorDBConfig(selectedConfig.db_id, config);
+      } else {
+        response = await vectorDBService.createVectorDBConfig(config);
+      }
+      
+      if (response.success) {
+        toast.success(isEditMode ? "Vector DB config updated successfully" : "Vector DB config created successfully");
+        setIsDialogOpen(false);
+        resetForm();
+        fetchConfigs();
+      } else {
+        toast.error(response.error || "Operation failed");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Operation failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!configToDelete) return;
+
+    try {
+      setDeleting(true);
+      const response = await vectorDBService.deleteVectorDBConfig(configToDelete.db_id);
+      
+      if (response.success) {
+        toast.success("Vector DB config deleted successfully");
+        setIsDeleteDialogOpen(false);
+        setConfigToDelete(null);
+        fetchConfigs();
+      } else {
+        toast.error(response.error || "Failed to delete config");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete config");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setCurrentConfig({});
+    setIsEditMode(false);
+    setSelectedConfig(null);
+  };
+
+  const openCreateDialog = () => {
+    resetForm();
+    setIsDialogOpen(true);
+  };
+
+  const openEditDialog = (config: VectorDBConfig) => {
+    setSelectedConfig(config);
+    setCurrentConfig({
+      DB_HOST: config.db_config?.DB_HOST || "",
+      DB_PORT: config.db_config?.DB_PORT || 5432,
+      DB_NAME: config.db_config?.DB_NAME || "",
+      DB_USER: config.db_config?.DB_USER || "",
+      DB_PASSWORD: "", // Don't pre-fill password
+      schema: config.db_config?.schema || "",
+    });
+    setIsEditMode(true);
+    setIsDialogOpen(true);
+  };
+
   const filteredConfigs = configs.filter(config => 
     config.db_config?.DB_NAME?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     config.db_id.toString().includes(searchQuery)
@@ -155,24 +266,24 @@ export default function VectorDBManagementPage() {
     {
       accessorKey: "db_id",
       header: "Config ID",
-      cell: ({ row }) => <div className="text-gray-400">#{row.getValue("db_id")}</div>,
+      cell: ({ row }) => <div className="text-gray-400 font-public-sans">#{row.getValue("db_id")}</div>,
     },
     {
       accessorKey: "db_config.DB_NAME",
       header: "Database Name",
-      cell: ({ row }) => <div className="font-medium text-white">{row.original.db_config?.DB_NAME || 'Unknown'}</div>,
+      cell: ({ row }) => <div className="font-medium text-white font-barlow">{row.original.db_config?.DB_NAME || 'Unknown'}</div>,
     },
     {
       accessorKey: "db_config.DB_HOST",
       header: "Host",
-      cell: ({ row }) => <div className="text-gray-400">{row.original.db_config?.DB_HOST || '-'}</div>,
+      cell: ({ row }) => <div className="text-gray-400 font-public-sans">{row.original.db_config?.DB_HOST || '-'}</div>,
     },
     {
       accessorKey: "updated_at",
       header: "Last Updated",
       cell: ({ row }) => {
         const date = row.getValue("updated_at") as string;
-        return <div className="text-gray-400">{date ? new Date(date).toLocaleDateString() : '-'}</div>;
+        return <div className="text-gray-400 font-public-sans">{date ? new Date(date).toLocaleDateString() : '-'}</div>;
       },
     },
     {
@@ -182,19 +293,37 @@ export default function VectorDBManagementPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-white/5">
                 <span className="sr-only">Open menu</span>
                 <MoreVertical className="h-4 w-4 text-gray-400" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#1a1f2e] border-white/10 text-white">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuLabel className="text-white font-barlow">Actions</DropdownMenuLabel>
+              <DropdownMenuItem 
+                onClick={() => openEditDialog(config)}
+                className="cursor-pointer hover:bg-white/5 focus:bg-white/5 text-white"
+              >
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Configuration
+              </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={() => openTableDialog(config)}
-                className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                className="cursor-pointer hover:bg-white/5 focus:bg-white/5 text-white"
               >
                 <Table className="mr-2 h-4 w-4" />
                 Manage Tables
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem 
+                onClick={() => {
+                  setConfigToDelete(config);
+                  setIsDeleteDialogOpen(true);
+                }}
+                className="cursor-pointer text-red-400 hover:bg-red-500/10 focus:bg-red-500/10"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Config
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -208,18 +337,24 @@ export default function VectorDBManagementPage() {
       <PageHeader 
         title="Vector DB Management" 
         description="Manage vector database configurations and tables"
-        icon={<Cpu className="w-6 h-6 text-purple-400" />}
+        icon={<Cpu className="w-6 h-6 text-emerald-400" />}
+        actions={
+          <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Vector DB
+          </Button>
+        }
       />
 
       <Card className="p-6 border border-white/10 bg-white/5 backdrop-blur-sm">
         <div className="flex items-center mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input 
+              <Input 
               placeholder="Search configs..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+              className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
             />
           </div>
           <Button variant="outline" size="icon" onClick={fetchConfigs} className="ml-2 border-white/10 text-gray-400 hover:text-white hover:bg-white/5">
@@ -258,7 +393,7 @@ export default function VectorDBManagementPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTable()}
                 />
               </div>
-              <Button onClick={handleAddTable} disabled={addingTable} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button onClick={handleAddTable} disabled={addingTable} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 <Plus className="w-4 h-4" />
               </Button>
             </div>
@@ -277,7 +412,7 @@ export default function VectorDBManagementPage() {
                   {tables.map((table) => (
                     <div key={table} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-white/10 transition-colors">
                       <div className="flex items-center gap-3">
-                        <Table className="w-4 h-4 text-purple-400" />
+                        <Table className="w-4 h-4 text-emerald-400" />
                         <span className="text-sm text-gray-200">{table}</span>
                       </div>
                       <Button 
@@ -298,6 +433,112 @@ export default function VectorDBManagementPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsTableDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5">
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="font-barlow text-white">{isEditMode ? "Edit Vector DB Config" : "Add New Vector DB Config"}</DialogTitle>
+            <DialogDescription className="text-gray-400 font-public-sans">
+              Configure connection details for the vector database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="dbName" className="text-white font-public-sans">Database Name *</Label>
+              <Input
+                id="dbName"
+                value={currentConfig.DB_NAME || ""}
+                onChange={(e) => setCurrentConfig({ ...currentConfig, DB_NAME: e.target.value })}
+                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                placeholder="e.g. vector_db"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="dbHost" className="text-white font-public-sans">Host *</Label>
+                <Input
+                  id="dbHost"
+                  value={currentConfig.DB_HOST || ""}
+                  onChange={(e) => setCurrentConfig({ ...currentConfig, DB_HOST: e.target.value })}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                  placeholder="localhost"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="dbPort" className="text-white font-public-sans">Port *</Label>
+                <Input
+                  id="dbPort"
+                  type="number"
+                  value={currentConfig.DB_PORT || ""}
+                  onChange={(e) => setCurrentConfig({ ...currentConfig, DB_PORT: parseInt(e.target.value) || 0 })}
+                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                  placeholder="5432"
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dbUser" className="text-white font-public-sans">Username *</Label>
+              <Input
+                id="dbUser"
+                value={currentConfig.DB_USER || ""}
+                onChange={(e) => setCurrentConfig({ ...currentConfig, DB_USER: e.target.value })}
+                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                placeholder="postgres"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="dbPassword" className="text-white font-public-sans">Password *</Label>
+              <Input
+                id="dbPassword"
+                type="password"
+                value={currentConfig.DB_PASSWORD || ""}
+                onChange={(e) => setCurrentConfig({ ...currentConfig, DB_PASSWORD: e.target.value })}
+                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                placeholder="********"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="schema" className="text-white font-public-sans">Schema *</Label>
+              <Input
+                id="schema"
+                value={currentConfig.schema || ""}
+                onChange={(e) => setCurrentConfig({ ...currentConfig, schema: e.target.value })}
+                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                placeholder="public"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+              {submitting ? "Saving..." : (isEditMode ? "Update Config" : "Create Config")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="bg-[#0f172a] border-white/10 text-white sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="font-barlow text-white">Delete Vector DB Config</DialogTitle>
+            <DialogDescription className="text-gray-400 font-public-sans">
+              Are you sure you want to delete <strong className="text-white">{configToDelete?.db_config?.DB_NAME}</strong>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
+              Cancel
+            </Button>
+            <Button onClick={handleDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white font-barlow">
+              {deleting ? "Deleting..." : "Delete Config"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -21,7 +21,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { ChevronUp, ChevronDown, MoreVertical, Filter } from "lucide-react";
+import { ChevronUp, ChevronDown, MoreVertical, Filter, Loader2 } from "lucide-react";
+import FilterIcon from "@/sidebar/filterIcon";
 
 export type TableColumn = {
   key: string;
@@ -53,7 +54,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function DataTable({
+function SimpleDataTable({
   columns = [],
   allKeys,
   data = [],
@@ -452,5 +453,180 @@ export default function DataTable({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Export simple table component as default
+export default SimpleDataTable;
+
+// TanStack Table compatible DataTable component (named export for admin pages)
+export type TanStackDataTableProps<TData> = {
+  columns: ColumnDef<TData>[];
+  data: TData[];
+  loading?: boolean;
+  pageSizeOptions?: number[];
+  defaultPageSize?: number;
+};
+
+export function DataTable<TData>({
+  columns,
+  data = [],
+  loading = false,
+  pageSizeOptions = [10, 20, 30, 50],
+  defaultPageSize = 10,
+}: TanStackDataTableProps<TData>) {
+  const theme = "dark";
+  const [pageSize, setPageSize] = useState(defaultPageSize);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sorting, setSorting] = useState<any>([]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(data.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  const currentData = data.slice(startIndex, endIndex);
+
+  const table = useReactTable({
+    data: currentData,
+    columns,
+    state: {
+      sorting,
+    },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualPagination: true,
+    pageCount: totalPages,
+  });
+
+  return (
+    <div className="w-full space-y-4">
+      {/* Table */}
+      <div className="rounded-lg border overflow-hidden border-white/10">
+        <Table>
+          <TableHeader className={cn(
+            theme === "dark" 
+              ? "bg-white/7" 
+              : "bg-[#f0f9f5]"
+          )}>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="font-semibold text-white/90">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-white/60" />
+                    <span className="text-white/60">Loading...</span>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : table.getRowModel().rows?.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="hover:bg-white/5"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="text-white/90">
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-white/60"
+                >
+                  No results.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      {!loading && data.length > 0 && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-white/60">
+              Rows per page:
+            </span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className={cn(
+                "border rounded-md px-3 py-1 text-sm bg-white/5 border-white/10 text-white",
+                "focus:outline-none focus:ring-2 focus:ring-white/20 focus:border-transparent"
+              )}
+            >
+              {pageSizeOptions.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-white/60">
+              {data.length === 0
+                ? "0"
+                : `${startIndex + 1}-${Math.min(
+                    endIndex,
+                    data.length
+                  )} of ${data.length}`}
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="border-white/10 text-white hover:bg-white/10"
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="border-white/10 text-white hover:bg-white/10"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

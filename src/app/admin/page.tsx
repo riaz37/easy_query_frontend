@@ -78,9 +78,9 @@ export default function AdminDashboard() {
     {
       title: "Vector DB Management",
       description: "Manage vector database configurations",
-      icon: <Cpu className="w-6 h-6 text-purple-400" />,
+      icon: <Cpu className="w-6 h-6 text-emerald-400" />,
       path: "/admin/vector-db",
-      color: "bg-purple-500/10 border-purple-500/20",
+      color: "bg-emerald-500/10 border-emerald-500/20",
       stats: "Vector Configs",
     },
     {
