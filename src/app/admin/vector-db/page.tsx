@@ -395,58 +395,59 @@ export default function VectorDBManagementPage() {
               </DialogHeader>
               <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
                 <div className="py-4 space-y-6">
-            {/* Add Table Form */}
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label htmlFor="tableName" className="sr-only">Table Name</Label>
-                <Input
-                  id="tableName"
-                  value={newTableName}
-                  onChange={(e) => setNewTableName(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                  placeholder="Enter table name"
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddTable()}
-                />
-              </div>
-              <Button onClick={handleAddTable} disabled={addingTable} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {/* Tables List */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-400 font-public-sans">Configured Tables</Label>
-              {loadingTables ? (
-                <div className="text-center py-4 text-gray-500 font-public-sans">Loading tables...</div>
-              ) : tables.length === 0 ? (
-                <EmptyState
-                  icon={Table}
-                  title="No Tables Configured"
-                  description="Add tables to make them accessible for this vector database configuration"
-                  variant="dashed"
-                  showAction={false}
-                  size="sm"
-                />
-              ) : (
-                <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
-                  {tables.map((table) => (
-                    <div key={table} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-white/10 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Table className="w-4 h-4 text-emerald-400" />
-                        <span className="text-sm text-gray-200 font-public-sans">{table}</span>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDeleteTable(table)}
-                        className="h-8 w-8 text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                  {/* Add Table Form */}
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Label htmlFor="tableName" className="sr-only">Table Name</Label>
+                      <Input
+                        id="tableName"
+                        value={newTableName}
+                        onChange={(e) => setNewTableName(e.target.value)}
+                        className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                        placeholder="Enter table name"
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddTable()}
+                      />
                     </div>
-                  ))}
-                </div>
-              )}
+                    <Button onClick={handleAddTable} disabled={addingTable} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Tables List */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-gray-400 font-public-sans">Configured Tables</Label>
+                    {loadingTables ? (
+                      <div className="text-center py-4 text-gray-500 font-public-sans">Loading tables...</div>
+                    ) : tables.length === 0 ? (
+                      <EmptyState
+                        icon={Table}
+                        title="No Tables Configured"
+                        description="Add tables to make them accessible for this vector database configuration"
+                        variant="dashed"
+                        showAction={false}
+                        size="sm"
+                      />
+                    ) : (
+                      <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                        {tables.map((table) => (
+                          <div key={table} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 group hover:border-white/10 transition-colors">
+                            <div className="flex items-center gap-3">
+                              <Table className="w-4 h-4 text-emerald-400" />
+                              <span className="text-sm text-gray-200 font-public-sans">{table}</span>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleDeleteTable(table)}
+                              className="h-8 w-8 text-gray-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <DialogFooter className="px-0 pb-0 pt-4">
                   <Button variant="outline" onClick={() => setIsTableDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
@@ -481,69 +482,70 @@ export default function VectorDBManagementPage() {
               </DialogHeader>
               <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
                 <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="dbName" className="text-white font-public-sans">Database Name *</Label>
-              <Input
-                id="dbName"
-                value={currentConfig.DB_NAME || ""}
-                onChange={(e) => setCurrentConfig({ ...currentConfig, DB_NAME: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                placeholder="e.g. vector_db"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="dbHost" className="text-white font-public-sans">Host *</Label>
-                <Input
-                  id="dbHost"
-                  value={currentConfig.DB_HOST || ""}
-                  onChange={(e) => setCurrentConfig({ ...currentConfig, DB_HOST: e.target.value })}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                  placeholder="localhost"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="dbPort" className="text-white font-public-sans">Port *</Label>
-                <Input
-                  id="dbPort"
-                  type="number"
-                  value={currentConfig.DB_PORT || ""}
-                  onChange={(e) => setCurrentConfig({ ...currentConfig, DB_PORT: parseInt(e.target.value) || 0 })}
-                  className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                  placeholder="5432"
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dbUser" className="text-white font-public-sans">Username *</Label>
-              <Input
-                id="dbUser"
-                value={currentConfig.DB_USER || ""}
-                onChange={(e) => setCurrentConfig({ ...currentConfig, DB_USER: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                placeholder="postgres"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="dbPassword" className="text-white font-public-sans">Password *</Label>
-              <Input
-                id="dbPassword"
-                type="password"
-                value={currentConfig.DB_PASSWORD || ""}
-                onChange={(e) => setCurrentConfig({ ...currentConfig, DB_PASSWORD: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                placeholder="********"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="schema" className="text-white font-public-sans">Schema *</Label>
-              <Input
-                id="schema"
-                value={currentConfig.schema || ""}
-                onChange={(e) => setCurrentConfig({ ...currentConfig, schema: e.target.value })}
-                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
-                placeholder="public"
-              />
+                  <div className="grid gap-2">
+                    <Label htmlFor="dbName" className="text-white font-public-sans">Database Name *</Label>
+                    <Input
+                      id="dbName"
+                      value={currentConfig.DB_NAME || ""}
+                      onChange={(e) => setCurrentConfig({ ...currentConfig, DB_NAME: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                      placeholder="e.g. vector_db"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="dbHost" className="text-white font-public-sans">Host *</Label>
+                      <Input
+                        id="dbHost"
+                        value={currentConfig.DB_HOST || ""}
+                        onChange={(e) => setCurrentConfig({ ...currentConfig, DB_HOST: e.target.value })}
+                        className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                        placeholder="localhost"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="dbPort" className="text-white font-public-sans">Port *</Label>
+                      <Input
+                        id="dbPort"
+                        type="number"
+                        value={currentConfig.DB_PORT || ""}
+                        onChange={(e) => setCurrentConfig({ ...currentConfig, DB_PORT: parseInt(e.target.value) || 0 })}
+                        className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                        placeholder="5432"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dbUser" className="text-white font-public-sans">Username *</Label>
+                    <Input
+                      id="dbUser"
+                      value={currentConfig.DB_USER || ""}
+                      onChange={(e) => setCurrentConfig({ ...currentConfig, DB_USER: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                      placeholder="postgres"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dbPassword" className="text-white font-public-sans">Password *</Label>
+                    <Input
+                      id="dbPassword"
+                      type="password"
+                      value={currentConfig.DB_PASSWORD || ""}
+                      onChange={(e) => setCurrentConfig({ ...currentConfig, DB_PASSWORD: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                      placeholder="********"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="schema" className="text-white font-public-sans">Schema *</Label>
+                    <Input
+                      id="schema"
+                      value={currentConfig.schema || ""}
+                      onChange={(e) => setCurrentConfig({ ...currentConfig, schema: e.target.value })}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                      placeholder="public"
+                    />
+                  </div>
                 </div>
                 <DialogFooter className="px-0 pb-0 pt-4">
                   <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="border-white/10 text-white hover:bg-white/5 font-barlow">
