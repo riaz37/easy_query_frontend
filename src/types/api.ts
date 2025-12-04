@@ -52,8 +52,9 @@ export interface UploadProgress {
 export interface SmartFileSystemRequest {
   files: File[];
   file_descriptions: string[];
-  table_names: string[];
-  user_ids: string[];
+  table_names?: string[]; // Optional: defaults to 'file_uploads' if not provided
+  config_ids?: number | number[]; // Optional: for vector DB configs
+  user_ids?: string; // Optional: single user ID string (either config_ids or user_ids must be provided)
   use_table?: boolean; // Optional: whether to use table names or not
 }
 
@@ -69,7 +70,7 @@ export interface TaskId {
 
 export interface SmartFileSystemResponse {
   message: string;
-  bundle_id: string;
+  bundle_id: string; // Always present when using smart_file_system endpoint (with config_ids)
   total_files: number;
   semi_structured_files: number;
   unstructured_files: number;

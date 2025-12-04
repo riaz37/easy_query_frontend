@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useQueryStore } from "@/store/query-store";
 import {
@@ -610,6 +610,7 @@ function FileQueryPageContent() {
           onFilesUploaded={handleFilesUploaded}
           onUploadStatusChange={handleUploadStatusChange}
           disabled={!isAuthenticated}
+          configId={selectedConfigId}
         />
       </div>
     </PageLayout>

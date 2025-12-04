@@ -22,7 +22,6 @@ interface UploadedFile {
   status: "pending" | "uploading" | "processing" | "completed" | "failed";
   bundleId?: string;
   error?: string;
-  taskId?: string;
 }
 
 interface EnhancedFileUploadModalProps {
@@ -31,6 +30,7 @@ interface EnhancedFileUploadModalProps {
   onFilesUploaded: (fileIds: string[]) => void;
   onUploadStatusChange: (files: UploadedFile[]) => void;
   disabled?: boolean;
+  configId?: number | null; // Vector DB config ID to use for upload
 }
 
 export function EnhancedFileUploadModal({
@@ -39,6 +39,7 @@ export function EnhancedFileUploadModal({
   onFilesUploaded,
   onUploadStatusChange,
   disabled = false,
+  configId,
 }: EnhancedFileUploadModalProps) {
   const { user } = useAuthContext();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
@@ -69,20 +70,22 @@ export function EnhancedFileUploadModal({
     
     try {
       // Generate descriptions and table names
+      // Note: Service only uses the first element, so we generate arrays but backend expects single values
       const fileDescriptions = files.map(uploadFile => `Uploaded file: ${uploadFile.file.name}`);
       const tableNames = files.map(uploadFile => `file_${uploadFile.file.name.replace(/[^a-zA-Z0-9]/g, '_')}`);
 
-      // Check if user is authenticated
-      if (!user?.user_id) {
-        throw new Error('User not authenticated. Please log in again.');
+      // Check if config ID is provided
+      if (!configId) {
+        throw new Error('Please select a Vector DB configuration first');
       }
 
       // Upload files using the smart file system API
+      // Service validates arrays have same length but only sends first element to backend
       const uploadResponse = await ServiceRegistry.file.uploadToSmartFileSystem({
         files: files.map(uploadFile => uploadFile.file),
-        file_descriptions: fileDescriptions,
-        table_names: tableNames,
-        user_ids: user.user_id,
+        file_descriptions: fileDescriptions, // Array - service validates length matches files
+        table_names: tableNames, // Array - service validates length matches files
+        config_ids: configId, // Use config_id instead of user_ids
       });
 
       if (uploadResponse.success && uploadResponse.data) {
@@ -134,7 +137,7 @@ export function EnhancedFileUploadModal({
     } finally {
       setIsUploading(false);
     }
-  }, [user?.user_id]);
+  }, [configId]);
 
   // Start progress polling for a bundle
   const startProgressPolling = useCallback((bundleId: string) => {
@@ -416,14 +419,14 @@ export function EnhancedFileUploadModal({
                 </div>
               </div>
 
-              {/* Authentication Warning */}
-              {!user?.user_id && (
+              {/* Config Selection Warning */}
+              {!configId && (
                 <div className="p-3 bg-yellow-500/20 border border-yellow-400/30 rounded-lg mb-4">
                   <div className="flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 text-yellow-400" />
-                    <span className="text-yellow-400 text-sm font-medium">Authentication Required</span>
+                    <span className="text-yellow-400 text-sm font-medium">Configuration Required</span>
                   </div>
-                  <p className="text-yellow-300 text-xs mt-1">Please log in to upload files</p>
+                  <p className="text-yellow-300 text-xs mt-1">Please select a Vector DB configuration first</p>
                 </div>
               )}
 
@@ -502,7 +505,7 @@ export function EnhancedFileUploadModal({
                       handleClose();
                     }
                   }}
-                  disabled={uploadedFiles.length === 0 || isUploading || !user?.user_id}
+                  disabled={uploadedFiles.length === 0 || isUploading || !configId}
                   className="modal-button-primary"
                 >
                   {isUploading ? "Uploading..." : "Upload Files"}
