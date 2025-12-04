@@ -3,11 +3,9 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useQueryStore } from "@/store/query-store";
-import { useTaskCreator } from "@/components/task-manager/TaskManagerProvider";
 import {
   useAuthContext,
   useDatabaseContext,
-  useBusinessRulesContext,
 } from "@/components/providers";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,6 +36,7 @@ import { PageLayout, PageHeader } from "@/components/layout/PageLayout";
 import { ContentWrapper } from "@/components/layout/ContentWrapper";
 import { copyToClipboard } from "@/lib/utils";
 import { AuthenticatedRoute } from "@/components/auth";
+import { VectorDBSelector } from "@/components/selectors";
 import { fileService } from "@/lib/api/services/file-service";
 import type {
   UploadedFile,
@@ -57,6 +56,10 @@ function FileQueryPageContent() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
+  // Vector DB config selection state
+  const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
+  const [selectedConfigName, setSelectedConfigName] = useState<string>("");
+
   // Table selection state
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [useTable, setUseTable] = useState(false); // Track table usage from FileUpload - disabled by default
@@ -68,13 +71,44 @@ function FileQueryPageContent() {
   // Typewriter control state
   const [stopTypewriter, setStopTypewriter] = useState(false);
 
+  // Progress state
+  const [queryProgress, setQueryProgress] = useState(0);
+  const [processingSteps, setProcessingSteps] = useState<string[]>([]);
+
+  const defaultProcessingSteps = useMemo(() => [
+    "Analyzing your query...",
+    "Searching documents...",
+    "Reranking results...",
+    "Generating answer...",
+  ], []);
+
+  // Simulate progress when executing
+  useEffect(() => {
+    if (isExecuting) {
+      setQueryProgress(0);
+      setProcessingSteps(defaultProcessingSteps);
+      
+      const interval = setInterval(() => {
+        setQueryProgress(prev => {
+          if (prev >= 90) {
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 800);
+
+      return () => clearInterval(interval);
+    } else {
+      setQueryProgress(0);
+      setProcessingSteps([]);
+    }
+  }, [isExecuting, defaultProcessingSteps]);
+
   // Store and context
   const { fileQueryHistory, loadQueryHistory, saveQuery } = useQueryStore();
-  const { createQueryTask, executeTask } = useTaskCreator();
 
   const { user, isLoading: userLoading, isAuthenticated } = useAuthContext();
   const { currentDatabaseId, currentDatabaseName } = useDatabaseContext();
-  const { businessRules, validateQuery } = useBusinessRulesContext();
 
   // Handle file upload status changes
   const handleUploadStatusChange = useCallback((files: UploadedFile[]) => {
@@ -87,27 +121,17 @@ function FileQueryPageContent() {
     // These IDs can be used when querying specific files
   }, []);
 
-  // Helper function to poll fast search status
-  const pollFastSearch = useCallback(
+  // Helper function to poll background file search status
+  const pollBackgroundFileSearch = useCallback(
     async (taskId: string, maxAttempts = 60, pollInterval = 2000) => {
       for (let attempt = 0; attempt < maxAttempts; attempt++) {
         try {
-          const statusResponse = await fileService.getFastSearchStatus(taskId);
+          const statusResponse = await fileService.pollBackgroundFileSearch(taskId);
 
           if (statusResponse.success && statusResponse.data) {
-            const task = statusResponse.data.task;
-
-            // Check if the task is completed
-            if (task.status === "completed") {
-              return statusResponse;
-            } else if (task.status === "failed") {
-              throw new Error(task.error || "Fast search failed");
-            }
-
-            // Still processing, wait and try again
-            await new Promise((resolve) => setTimeout(resolve, pollInterval));
+            return statusResponse;
           } else {
-            throw new Error("Failed to get fast search status");
+            throw new Error(statusResponse.error || "Failed to get file search status");
           }
         } catch (error) {
           if (attempt === maxAttempts - 1) {
@@ -117,7 +141,7 @@ function FileQueryPageContent() {
         }
       }
 
-      throw new Error("Fast search timeout: Maximum polling attempts reached");
+      throw new Error("File search timeout: Maximum polling attempts reached");
     },
     []
   );
@@ -152,15 +176,10 @@ function FileQueryPageContent() {
         return;
       }
 
-      // Validate query against business rules if database is selected
-      if (currentDatabaseId) {
-        const validationResult = validateQuery(queryText, currentDatabaseId);
-        if (!validationResult.isValid) {
-          toast.error(
-            `Query validation failed: ${validationResult.errors.join(", ")}`
-          );
-          return;
-        }
+      // Validate that a Vector DB config is selected
+      if (!selectedConfigId) {
+        toast.error("Please select a Vector DB configuration first");
+        return;
       }
 
       setIsExecuting(true);
@@ -168,149 +187,107 @@ function FileQueryPageContent() {
       setQueryResults([]);
       setQuery(queryText);
 
-      const startTime = Date.now();
+      try {
+        // Get file IDs from completed uploads
+        const completedFileIds = uploadedFiles
+          .filter((file) => file.status === "completed")
+          .map((file) => file.id);
 
-      // Create a task for file query execution
-      const taskId = createQueryTask(
-        "File Query Execution",
-        `Executing file query: "${queryText}"`,
-        {
+        // Use the selected config_id for the query
+        const searchRequest = {
           query: queryText,
-          mode: "file_query",
-          selectedTable,
-          useTable,
-          fileIds: uploadedFiles
-            .filter((file) => file.status === "completed")
-            .map((file) => file.id),
+          config_id: selectedConfigId, // Use selected Vector DB config
+          user_id: user?.user_id,
+          table_specific: !!selectedTable,
+          tables: selectedTable ? [selectedTable] : [],
+          answer_style: options?.answerStyle || "detailed",
+          use_intent_reranker: false,
+          use_chunk_reranker: false,
+          use_dual_embeddings: true,
+          intent_top_k: 20,
+          chunk_top_k: 40,
+          max_chunks_for_answer: 40,
+          file_ids: completedFileIds.length > 0 ? completedFileIds : undefined,
+        };
+
+        // Execute file search synchronously
+        const searchResponse = await fileService.searchFiles(searchRequest);
+
+        if (!searchResponse.success || !searchResponse.data) {
+          throw new Error(
+            searchResponse.error || "Failed to execute file search"
+          );
         }
-      );
 
-      // Execute the task in background
-      executeTask(taskId, async () => {
-        try {
-          // Get file IDs from completed uploads
-          const completedFileIds = uploadedFiles
-            .filter((file) => file.status === "completed")
-            .map((file) => file.id);
+        const searchData = searchResponse.data;
+        console.log("File search response:", searchData);
 
-          // Execute fast file search
-          const fastSearchResponse = await fileService.startFastSearch({
-            query: queryText,
-            user_id: user?.user_id || "",
-            table_name: selectedTable || undefined,
-            table_specific: !!selectedTable,
-            limit: 5,
+        // Extract results from the response
+        const answer = searchData.answer;
+        const sources = answer.sources || [];
+
+        // Create structured response data
+        const structuredResponseData: {
+          query: string;
+          results: Array<{ filename: string; similarity?: number }>;
+          answer: string;
+          total_results: number;
+        } = {
+          query: searchData.query || queryText,
+          results: sources.map((source: any, index: number) => ({
+            filename: source.file_name || source.filename || `Document ${index + 1}`,
+            similarity: source.similarity,
+          })),
+          answer: answer.answer || "",
+          total_results: answer.sources_used || sources.length || 0,
+        };
+
+        // Set the structured response for the component
+        setStructuredResponse(structuredResponseData);
+
+        // Results are now only handled through structuredResponse
+        setQueryResults([]);
+
+        // Save to history
+        if (user?.user_id && structuredResponseData) {
+          saveQuery({
+            id: Math.random().toString(36).substr(2, 9),
+            type: "file",
+            query: structuredResponseData.query,
+            userId: user.user_id,
+            timestamp: new Date(),
+            results: [],
+            metadata: {
+              structuredResponse: structuredResponseData,
+              resultCount: structuredResponseData.total_results || 0,
+              fileIds: completedFileIds,
+            },
           });
-
-          if (
-            !fastSearchResponse.success ||
-            !fastSearchResponse.data?.search_task_id
-          ) {
-            throw new Error(
-              fastSearchResponse.error || "Failed to start fast search"
-            );
-          }
-
-          // Poll for completion
-          const taskId = fastSearchResponse.data.search_task_id;
-          const response = await pollFastSearch(taskId);
-
-          if (!response.success || !response.data) {
-            throw new Error(response.error || "Fast search failed");
-          }
-
-          if (response.success && response.data) {
-            const searchData = response.data;
-            console.log("File search response:", searchData);
-
-            // Extract results from the task results
-            let results: FileQueryResult[] = [];
-
-            // Handle the new response structure: response.data.task.results
-            const taskResults = searchData.task?.results;
-
-            // Define finalQueryText at the top level so it's available throughout
-            const finalQueryText =
-              taskResults?.query || searchData.task?.query || queryText;
-
-            // Declare structuredResponseData outside the if block so it's available throughout
-            let structuredResponseData: {
-              query: string;
-              results: Array<{ filename: string; similarity: number }>;
-              answer: string;
-              total_results: number;
-            } | null = null;
-
-            if (taskResults && taskResults.answer) {
-              // Create structured response for the new format
-              structuredResponseData = {
-                query: finalQueryText,
-                results: taskResults.results || [],
-                answer: taskResults.answer,
-                total_results: taskResults.total_results || 0,
-              };
-
-              // Set the structured response for the component
-              setStructuredResponse(structuredResponseData);
-            }
-
-            // Results are now only handled through structuredResponse
-            setQueryResults([]);
-
-            // Save to history
-            if (user?.user_id && structuredResponseData) {
-              saveQuery({
-                id: Math.random().toString(36).substr(2, 9),
-                type: "file",
-                query: finalQueryText,
-                userId: user.user_id,
-                timestamp: new Date(),
-                results: [],
-                metadata: {
-                  structuredResponse: structuredResponseData,
-                  resultCount: structuredResponseData.total_results || 0,
-                  fileIds: completedFileIds,
-                },
-              });
-            }
-
-            const totalResults = structuredResponseData?.total_results || 0;
-            toast.success(
-              `Query executed successfully! Found ${totalResults} source document${totalResults !== 1 ? 's' : ''}.`
-            );
-
-            return structuredResponseData;
-          } else {
-            throw new Error(response.error || "Query execution failed");
-          }
-        } catch (error) {
-          console.error("File query execution error:", error);
-          const errorMessage =
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred";
-          setQueryError(errorMessage);
-          toast.error(`Query failed: ${errorMessage}`);
-          throw error;
         }
-      })
-        .catch((error) => {
-          console.error("Failed to execute file query:", error);
-        })
-        .finally(() => {
-          setIsExecuting(false);
-        });
+
+        const totalResults = structuredResponseData.total_results || 0;
+        toast.success(
+          `Query executed successfully! Found ${totalResults} source document${totalResults !== 1 ? 's' : ''}.`
+        );
+      } catch (error) {
+        console.error("File query execution error:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+        setQueryError(errorMessage);
+        toast.error(`Query failed: ${errorMessage}`);
+      } finally {
+        setIsExecuting(false);
+      }
     },
     [
       isAuthenticated,
       user?.user_id,
-      currentDatabaseId,
-      validateQuery,
+      selectedConfigId,
       uploadedFiles,
       saveQuery,
       selectedTable,
-      createQueryTask,
-      executeTask,
       useTable,
     ]
   );
@@ -559,6 +536,18 @@ function FileQueryPageContent() {
           </div>
         )}
 
+        {/* Vector DB Selector - Above Query Form */}
+        <div className="px-4 sm:px-6 lg:px-32 mb-6">
+          <VectorDBSelector
+            selectedConfigId={selectedConfigId}
+            onConfigSelect={(configId, configName) => {
+              setSelectedConfigId(configId);
+              setSelectedConfigName(configName);
+              toast.success(`Selected Vector DB: ${configName}`);
+            }}
+          />
+        </div>
+
         {/* Table Toggle - Above Query Form */}
         <div className="px-4 sm:px-6 lg:px-32 mb-8">
           <UseTableToggle useTable={useTable} onToggle={setUseTable} />
@@ -582,6 +571,8 @@ function FileQueryPageContent() {
                   handleQuerySubmit(query, { answerStyle: "detailed" })
                 }
                 stopTypewriter={stopTypewriter}
+                progress={queryProgress}
+                currentStep={processingSteps[Math.min(Math.floor((queryProgress / 100) * processingSteps.length), processingSteps.length - 1)] || "Processing..."}
               />
             </div>
 

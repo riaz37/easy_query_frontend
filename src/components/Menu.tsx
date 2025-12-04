@@ -2,12 +2,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useUIStore } from "@/store/ui-store";
+import { useUIStore } from "@/store/uiStore";
 import { cn } from "@/lib/utils";
 
 export default function Menu() {
   const pathname = usePathname();
-  const { setSidebarOpen } = useUIStore();
+  const { setShowSidebar } = useUIStore();
 
   const menuItems = [
     {
@@ -65,7 +65,7 @@ export default function Menu() {
               <Link
                 key={item.name}
                 href={item.path}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => setShowSidebar(false)}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-[99px] text-sm font-medium transition-all duration-200 menu-item",
                   "max-sm:px-3 max-sm:py-4 max-sm:text-base max-sm:gap-4",

@@ -2,7 +2,53 @@
 
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuthContext } from './AuthContextProvider';
-import { STORAGE_KEYS, saveToUserStorage, loadFromUserStorage, clearEasyQueryStorage } from '@/lib/utils/storage';
+import { storage } from '@/lib/utils/storage';
+
+// Storage keys for database configuration
+const STORAGE_KEYS = {
+  CURRENT_DATABASE: 'easy_query_current_database',
+  AVAILABLE_DATABASES: 'easy_query_available_databases',
+  USER_DATABASES: 'easy_query_user_databases',
+  MSSQL_DATABASES: 'easy_query_mssql_databases',
+};
+
+// Helper function to save data to user-specific storage
+function saveToUserStorage(key: string, userId: string, data: any) {
+  if (!userId) return;
+  try {
+    const storageKey = `${key}_${userId}`;
+    storage.set(storageKey, JSON.stringify(data));
+  } catch (error) {
+    console.error('Failed to save to user storage:', error);
+  }
+}
+
+// Helper function to load data from user-specific storage
+function loadFromUserStorage(key: string, userId: string): any {
+  if (!userId) return null;
+  try {
+    const storageKey = `${key}_${userId}`;
+    const data = storage.get(storageKey);
+    return data ? JSON.parse(data) : null;
+  } catch (error) {
+    console.error('Failed to load from user storage:', error);
+    return null;
+  }
+}
+
+// Helper function to clear all Easy Query storage for a user
+function clearEasyQueryStorage(userId?: string) {
+  if (!userId) return;
+  try {
+    Object.values(STORAGE_KEYS).forEach(key => {
+      const storageKey = `${key}_${userId}`;
+      storage.remove(storageKey);
+    });
+  } catch (error) {
+    console.error('Failed to clear Easy Query storage:', error);
+  }
+}
+
 
 // Types for database context
 export interface DatabaseConfig {

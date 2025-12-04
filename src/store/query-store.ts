@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { queryService } from '@/lib/api/services/query-service';
 import { fileService } from '@/lib/api/services/file-service';
-import { BusinessRulesValidator } from '@/lib/utils/business-rules-validator';
+
 
 // Query Types
 export interface QueryRequest {
@@ -28,13 +28,22 @@ export interface QueryResult {
   error?: string;
 }
 
+export interface QueryHistoryItem {
+  id: string;
+  query: string;
+  type: 'file' | 'database';
+  userId: string;
+  timestamp: Date;
+  status: 'success' | 'error' | 'pending';
+  executionTime?: number;
+  rowCount?: number;
+}
 
 export interface FileQueryRequest {
   fileId: string;
   query: string;
   userId: string;
   parameters?: {
-    config_id?: number; // Config ID for file queries
     table_specific?: boolean;
     tables?: string[];
     use_intent_reranker?: boolean;
@@ -74,29 +83,41 @@ interface QueryStore {
   queryResults: QueryResult | null;
   queryLoading: boolean;
   queryError: string | null;
-  
+
   // File Queries
   fileQueries: FileQueryRequest[];
-  
+  fileQueryHistory: QueryHistoryItem[];
+
   // Database Queries
   databaseQueries: DatabaseQueryRequest[];
-  
+  databaseQueryHistory: QueryHistoryItem[];
+
   // Saved Queries
   savedQueries: SavedQuery[];
-  
+
   // Actions
   setCurrentQuery: (query: QueryRequest | null) => void;
   setQueryResults: (results: QueryResult | null) => void;
   setQueryLoading: (loading: boolean) => void;
   setQueryError: (error: string | null) => void;
-  
+
   // Query Execution
   executeFileQuery: (query: FileQueryRequest) => Promise<void>;
   executeDatabaseQuery: (query: DatabaseQueryRequest) => Promise<void>;
-  
+
   // Query Management
   saveQuery: (query: Omit<SavedQuery, 'id' | 'createdAt' | 'updatedAt'>) => Promise<void>;
+  loadQueryHistory: (userId: string, type?: 'file' | 'database') => Promise<void>;
   clearQueryResults: () => void;
+
+  // History Management
+  addToHistory: (item: QueryHistoryItem) => void;
+  clearHistory: (userId: string) => void;
+
+  // Saved Queries Management
+  loadSavedQueries: (userId: string) => Promise<void>;
+  deleteSavedQuery: (queryId: string) => Promise<void>;
+  updateSavedQuery: (queryId: string, updates: Partial<SavedQuery>) => Promise<void>;
 }
 
 export const useQueryStore = create<QueryStore>()(
@@ -108,7 +129,9 @@ export const useQueryStore = create<QueryStore>()(
       queryLoading: false,
       queryError: null,
       fileQueries: [],
+      fileQueryHistory: [],
       databaseQueries: [],
+      databaseQueryHistory: [],
       savedQueries: [],
 
       // Basic Setters
@@ -119,12 +142,12 @@ export const useQueryStore = create<QueryStore>()(
 
       // Query Execution - Using REAL APIs
       executeFileQuery: async (queryRequest) => {
-        const { setQueryLoading, setQueryError, setQueryResults } = get();
-        
+        const { setQueryLoading, setQueryError, setQueryResults, addToHistory } = get();
+
         try {
           setQueryLoading(true);
           setQueryError(null);
-          
+
           // Create query request
           const query: QueryRequest = {
             id: Math.random().toString(36).substr(2, 9),
@@ -134,11 +157,10 @@ export const useQueryStore = create<QueryStore>()(
             timestamp: new Date(),
             parameters: queryRequest.parameters,
           };
-          
+
           // Use authenticated FileService.searchFiles API with user_id
           const searchParams: any = {
             query: queryRequest.query,
-            config_id: queryRequest.parameters?.config_id || 1, // Use config_id from parameters or default to 1
             user_id: queryRequest.userId, // Pass user_id from the request
             intent_top_k: 20,
             chunk_top_k: 40,
@@ -162,7 +184,7 @@ export const useQueryStore = create<QueryStore>()(
           }
 
           const result = await fileService.searchFiles(searchParams);
-          
+
           // Transform API response to our QueryResult format
           const queryResult: QueryResult = {
             id: query.id,
@@ -176,25 +198,36 @@ export const useQueryStore = create<QueryStore>()(
               rowCount: result.data?.length || 0,
             },
           };
-          
+
           setQueryResults(queryResult);
-          
+          addToHistory(query);
+
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'File query failed';
           console.error('File query error:', error);
           setQueryError(errorMessage);
+
+          // Add failed query to history
+          addToHistory({
+            id: Math.random().toString(36).substr(2, 9),
+            query: queryRequest.query,
+            type: 'file',
+            userId: queryRequest.userId,
+            timestamp: new Date(),
+            status: 'error',
+          });
         } finally {
           setQueryLoading(false);
         }
       },
 
       executeDatabaseQuery: async (queryRequest) => {
-        const { setQueryLoading, setQueryError, setQueryResults } = get();
-        
+        const { setQueryLoading, setQueryError, setQueryResults, addToHistory } = get();
+
         try {
           setQueryLoading(true);
           setQueryError(null);
-          
+
           // Validate query against business rules first
           try {
             // Business rules validation is now handled by context providers
@@ -203,7 +236,7 @@ export const useQueryStore = create<QueryStore>()(
             console.warn('Failed to validate against business rules:', error);
             // Continue with query execution even if business rules validation fails
           }
-          
+
           // Create query request
           const query: QueryRequest = {
             id: Math.random().toString(36).substr(2, 9),
@@ -213,14 +246,14 @@ export const useQueryStore = create<QueryStore>()(
             timestamp: new Date(),
             parameters: queryRequest.parameters,
           };
-          
+
           // Use authenticated QueryService.sendDatabaseQuery API with background processing
           const result = await queryService.sendDatabaseQuery(
-            queryRequest.query, 
+            queryRequest.query,
             queryRequest.userId || 'default',
             'gemini' // Default model, can be made configurable
           );
-          
+
           // Transform API response to our QueryResult format
           const queryResult: QueryResult = {
             id: query.id,
@@ -234,13 +267,24 @@ export const useQueryStore = create<QueryStore>()(
               rowCount: result.data?.length || 0,
             },
           };
-          
+
           setQueryResults(queryResult);
-          
+          addToHistory(query);
+
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Database query failed';
           console.error('Database query error:', error);
           setQueryError(errorMessage);
+
+          // Add failed query to history
+          addToHistory({
+            id: Math.random().toString(36).substr(2, 9),
+            query: queryRequest.query,
+            type: 'database',
+            userId: queryRequest.userId,
+            timestamp: new Date(),
+            status: 'error',
+          });
         } finally {
           setQueryLoading(false);
         }
@@ -255,14 +299,181 @@ export const useQueryStore = create<QueryStore>()(
           createdAt: new Date(),
           updatedAt: new Date(),
         };
-        
+
         set({ savedQueries: [...savedQueries, newQuery] });
-        
+
         // TODO: When backend API is available, implement:
         // await QueryService.saveQuery(newQuery);
       },
 
+      // History loading - now uses separate endpoints for file and database queries
+      loadQueryHistory: async (userId, type) => {
+        try {
+          // For file queries, use the new fast search user tasks endpoint
+          if (type === 'file') {
+            const searchTasksResponse = await fileService.getUserSearchTasks(userId, 20);
+
+            if (searchTasksResponse.success && searchTasksResponse.data) {
+              // Convert search tasks to QueryHistoryItem format
+              const fileHistory: QueryHistoryItem[] = searchTasksResponse.data.tasks.map(task => ({
+                id: task.search_task_id,
+                query: task.query,
+                userId: userId,
+                timestamp: new Date(task.created_at),
+                type: 'file' as const,
+                status: task.status === 'completed' ? 'success' as const :
+                  task.status === 'failed' ? 'error' as const :
+                    'pending' as const,
+              }));
+
+              set({ fileQueryHistory: fileHistory });
+            } else {
+              set({ fileQueryHistory: [] });
+            }
+            return;
+          }
+
+          // For database queries, use the database query history endpoint
+          if (type === 'database') {
+            const historyResponse = await historyService.fetchQueryHistory(userId);
+
+            if (historyResponse.success && historyResponse.data) {
+              let history = Array.isArray(historyResponse.data) ? historyResponse.data : [];
+              const dbHistory = history.filter(item => item.type === 'database');
+              set({ databaseQueryHistory: dbHistory });
+            } else {
+              set({ databaseQueryHistory: [] });
+            }
+            return;
+          }
+
+          // For 'all' or no type specified, load both file and database histories
+          const [fileSearchResponse, dbHistoryResponse] = await Promise.allSettled([
+            fileService.getUserSearchTasks(userId, 20),
+            historyService.fetchQueryHistory(userId)
+          ]);
+
+          // Process file query history
+          let fileHistory: QueryHistoryItem[] = [];
+          if (fileSearchResponse.status === 'fulfilled' && fileSearchResponse.value.success && fileSearchResponse.value.data) {
+            fileHistory = fileSearchResponse.value.data.tasks.map(task => ({
+              id: task.search_task_id,
+              query: task.query,
+              userId: userId,
+              timestamp: new Date(task.created_at),
+              type: 'file' as const,
+              status: task.status === 'completed' ? 'success' as const :
+                task.status === 'failed' ? 'error' as const :
+                  'pending' as const,
+            }));
+          }
+
+          // Process database query history
+          let dbHistory: QueryHistoryItem[] = [];
+          if (dbHistoryResponse.status === 'fulfilled' && dbHistoryResponse.value.success && dbHistoryResponse.value.data) {
+            let history = Array.isArray(dbHistoryResponse.value.data) ? dbHistoryResponse.value.data : [];
+            dbHistory = history.filter(item => item.type === 'database');
+          }
+
+          set({
+            fileQueryHistory: fileHistory,
+            databaseQueryHistory: dbHistory,
+          });
+        } catch (error) {
+          console.error('Failed to load query history:', error);
+          // Fallback to empty arrays
+          if (type === 'file') {
+            set({ fileQueryHistory: [] });
+          } else if (type === 'database') {
+            set({ databaseQueryHistory: [] });
+          } else {
+            set({
+              fileQueryHistory: [],
+              databaseQueryHistory: [],
+            });
+          }
+        }
+      },
+
       clearQueryResults: () => set({ queryResults: null, queryError: null }),
+
+      // History Management - Now uses authenticated backend service
+      addToHistory: (item) => {
+        const { fileQueryHistory, databaseQueryHistory } = get();
+
+        if (item.type === 'file') {
+          set({
+            fileQueryHistory: [item, ...fileQueryHistory.slice(0, 99)] // Keep last 100 items
+          });
+        } else {
+          set({
+            databaseQueryHistory: [item, ...databaseQueryHistory.slice(0, 99)] // Keep last 100 items
+          });
+        }
+      },
+
+      // Clear history now uses authenticated service
+      clearHistory: async (userId) => {
+        try {
+          // Use authenticated history service (userId required)
+          await historyService.clearHistory(userId);
+          set({
+            fileQueryHistory: [],
+            databaseQueryHistory: [],
+          });
+        } catch (error) {
+          console.error('Failed to clear history:', error);
+          // Still clear local state even if backend fails
+          set({
+            fileQueryHistory: [],
+            databaseQueryHistory: [],
+          });
+        }
+      },
+
+      // Saved Queries Management - Local state management
+      loadSavedQueries: async (userId) => {
+        // Currently no backend API for saved queries, so we'll use local state
+        // TODO: When backend API is available, implement:
+        // const savedQueries = await QueryService.getSavedQueries(userId);
+
+        // For now, just ensure we have empty array
+        set({ savedQueries: [] });
+      },
+
+      deleteSavedQuery: async (queryId) => {
+        try {
+          // Currently no backend API for deleting saved queries
+          // TODO: When backend API is available, implement:
+          // await QueryService.deleteSavedQuery(queryId);
+
+          const { savedQueries } = get();
+          set({ savedQueries: savedQueries.filter(q => q.id !== queryId) });
+        } catch (error) {
+          console.error('Failed to delete saved query:', error);
+          throw error;
+        }
+      },
+
+      updateSavedQuery: async (queryId, updates) => {
+        try {
+          // Currently no backend API for updating saved queries
+          // TODO: When backend API is available, implement:
+          // await QueryService.updateSavedQuery(queryId, updates);
+
+          const { savedQueries } = get();
+          set({
+            savedQueries: savedQueries.map(q =>
+              q.id === queryId
+                ? { ...q, ...updates, updatedAt: new Date() }
+                : q
+            )
+          });
+        } catch (error) {
+          console.error('Failed to update saved query:', error);
+          throw error;
+        }
+      },
     }),
     {
       name: 'query-store',

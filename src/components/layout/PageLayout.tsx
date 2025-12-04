@@ -30,14 +30,9 @@ export function PageLayout({
   container = true,
   maxWidth = "7xl",
 }: PageLayoutProps) {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  
   const backgroundClasses = {
-    default: isDark ? "bg-background" : "bg-gray-50",
-    gradient: isDark 
-      ? "bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900" 
-      : "bg-gradient-to-br from-gray-50 via-blue-50 to-emerald-50",
+    default: "bg-background",
+    gradient: "bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900",
     frame: "", // Frame background handles its own styling
     gridframe: "", // Gridframe background handles its own styling
     none: "",
@@ -153,19 +148,12 @@ export function PageHeader({
   className,
   enhancedTitle = false,
 }: PageHeaderProps) {
-  const theme = useTheme();
-  const isDark = theme === 'dark';
-  
   return (
     <div className={cn("mb-8", className)}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           {icon && (
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${
-              isDark 
-                ? 'bg-gradient-to-br from-blue-500/30 to-blue-600/20 border-blue-500/40' 
-                : 'bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300'
-            }`}>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center border bg-gradient-to-br from-blue-500/30 to-blue-600/20 border-blue-500/40">
               {icon}
             </div>
           )}
@@ -174,12 +162,12 @@ export function PageHeader({
               "text-3xl font-bold font-barlow",
               enhancedTitle 
                 ? "modal-title-enhanced !text-4xl" 
-                : isDark ? 'text-white' : 'text-gray-900'
+                : "text-white"
             )}>
               {title}
             </h1>
             {description && (
-              <p className={`font-public-sans ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <p className="font-public-sans text-gray-400">
                 {description}
               </p>
             )}

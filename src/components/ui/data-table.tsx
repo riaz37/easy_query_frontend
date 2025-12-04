@@ -21,9 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import FilterIcon from "@/icons/sidebar/filterIcon";
-import { useResolvedTheme, useTheme } from "@/store/theme-store";
-import { ChevronUp, ChevronDown, MoreVertical } from "lucide-react";
+import { ChevronUp, ChevronDown, MoreVertical, Filter } from "lucide-react";
 
 export type TableColumn = {
   key: string;
@@ -62,7 +60,8 @@ export default function DataTable({
   pageSizeOptions = [7, 10, 20, 30],
   defaultPageSize = 7,
 }: DataTableProps) {
-  const theme = useTheme();
+  // Simple dark mode detection - always use dark for this app
+  const theme = "dark";
   const [showFilters, setShowFilters] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});

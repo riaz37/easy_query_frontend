@@ -15,7 +15,6 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/loading";
 import { ServiceRegistry } from "@/lib/api/services/service-registry";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
-import { useTaskCreator } from "@/components/task-manager";
 
 interface UploadedFile {
   id: string;
@@ -42,7 +41,6 @@ export function EnhancedFileUploadModal({
   disabled = false,
 }: EnhancedFileUploadModalProps) {
   const { user } = useAuthContext();
-  const { createFileUploadTask, executeTask, completeTask, failTask } = useTaskCreator();
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [pollingIntervals, setPollingIntervals] = useState<Record<string, NodeJS.Timeout>>({});
@@ -79,66 +77,43 @@ export function EnhancedFileUploadModal({
         throw new Error('User not authenticated. Please log in again.');
       }
 
-      // Create a task for file upload
-      const taskId = createFileUploadTask(
-        `File Upload: ${files.length} file(s)`,
-        `Uploading ${files.map(f => f.file.name).join(', ')}`,
-        {
-          fileCount: files.length,
-          fileNames: files.map(f => f.file.name),
-          userId: user.user_id,
-        }
-      );
+      // Upload files using the smart file system API
+      const uploadResponse = await ServiceRegistry.file.uploadToSmartFileSystem({
+        files: files.map(uploadFile => uploadFile.file),
+        file_descriptions: fileDescriptions,
+        table_names: tableNames,
+        user_ids: user.user_id,
+      });
 
-      // Execute the task in background - don't complete immediately for file uploads
-      await executeTask(
-        taskId,
-        async () => {
-          // Upload files using the new fast upload API
-          const uploadResponse = await ServiceRegistry.file.uploadFilesFastBackground({
-            files: files.map(uploadFile => uploadFile.file),
-            file_descriptions: fileDescriptions,
-            table_names: tableNames,
-            user_ids: user.user_id,
+      if (uploadResponse.success && uploadResponse.data) {
+        const bundleId = uploadResponse.data.bundle_id;
+        
+        // Validate bundleId before proceeding
+        if (!bundleId || typeof bundleId !== 'string' || bundleId.trim().length === 0) {
+          throw new Error('Invalid bundle ID received from server');
+        }
+        
+        // Update files with bundle ID
+        setUploadedFiles((prev) => {
+          const updated = prev.map(uploadFile => {
+            const matchingFile = files.find(f => f.id === uploadFile.id);
+            if (matchingFile) {
+              return {
+                ...uploadFile,
+                bundleId,
+                status: 'processing' as const,
+              };
+            }
+            return uploadFile;
           });
+          return updated;
+        });
 
-          if (uploadResponse.success && uploadResponse.data) {
-            const bundleId = uploadResponse.data.bundle_id;
-            
-            // Update files with bundle ID and task ID
-            setUploadedFiles((prev) => {
-              const updated = prev.map(uploadFile => {
-                const matchingFile = files.find(f => f.id === uploadFile.id);
-                if (matchingFile) {
-                  return {
-                    ...uploadFile,
-                    bundleId,
-                    taskId,
-                    status: 'processing' as const,
-                  };
-                }
-                return uploadFile;
-              });
-              return updated;
-            });
-
-            // Start progress polling
-            startProgressPolling(bundleId);
-            
-            return uploadResponse.data;
-          } else {
-            throw new Error(uploadResponse.error || 'File upload failed');
-          }
-        },
-        undefined, // progressCallback
-        {
-          shouldCompleteImmediately: false, 
-          onUploadSuccess: (result) => {
-            // This callback is called when upload succeeds but before processing completes
-            console.log('File upload successful, starting processing monitoring for bundle:', result.bundle_id);
-          }
-        }
-      );
+        // Start progress polling
+        startProgressPolling(bundleId);
+      } else {
+        throw new Error(uploadResponse.error || 'File upload failed');
+      }
     } catch (error) {
       console.error('File upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'File upload failed';
@@ -159,17 +134,29 @@ export function EnhancedFileUploadModal({
     } finally {
       setIsUploading(false);
     }
-  }, [user?.user_id, createFileUploadTask, executeTask]);
+  }, [user?.user_id]);
 
   // Start progress polling for a bundle
   const startProgressPolling = useCallback((bundleId: string) => {
+    // Validate bundleId before starting polling
+    if (!bundleId || typeof bundleId !== 'string' || bundleId.trim().length === 0) {
+      console.error('Invalid bundleId provided to startProgressPolling:', bundleId);
+      return;
+    }
+
     const pollInterval = setInterval(async () => {
       try {
-        const statusResponse = await ServiceRegistry.file.getFastBundleResult(bundleId);
+        // Double-check bundleId is still valid
+        if (!bundleId || bundleId.trim().length === 0) {
+          clearInterval(pollInterval);
+          return;
+        }
+
+        const statusResponse = await ServiceRegistry.file.getBundleTaskStatus(bundleId);
         
-        if (statusResponse.success && statusResponse.data?.bundle) {
-          // The API returns { status_code: 200, bundle: {...} }
-          const bundle = statusResponse.data.bundle;
+        if (statusResponse.success && statusResponse.data) {
+          // The API returns BundleTaskStatusResponse directly
+          const bundle = statusResponse.data;
           
           console.log('Progress update for bundle:', bundleId, 'status:', bundle);
           
@@ -236,19 +223,11 @@ export function EnhancedFileUploadModal({
                 onFilesUploaded(completedFiles);
               }
               
-              // Complete the task in the task manager when processing is actually finished
-              // Use setTimeout to defer this to avoid React state update warnings
-              const taskId = updatedFiles.find(file => file.bundleId === bundleId)?.taskId;
-              if (taskId) {
-                setTimeout(() => {
-                  if (bundleStatus === 'completed') {
-                    completeTask(taskId, { bundleId, status: 'completed', completedFiles: bundle.completed_files });
-                    toast.success(`All files processed successfully! Total: ${bundle.completed_files}`);
-                  } else {
-                    failTask(taskId, `Processing failed. Completed: ${bundle.completed_files}, Failed: ${bundle.failed_files}`);
-                    toast.error(`Some files failed to process. Completed: ${bundle.completed_files}, Failed: ${bundle.failed_files}`);
-                  }
-                }, 0);
+              // Show success/error toast when processing is finished
+              if (bundleStatus === 'completed') {
+                toast.success(`All files processed successfully! Total: ${bundle.completed_files}`);
+              } else {
+                toast.error(`Some files failed to process. Completed: ${bundle.completed_files}, Failed: ${bundle.failed_files}`);
               }
               
               return updatedFiles;
@@ -268,7 +247,7 @@ export function EnhancedFileUploadModal({
       ...prev,
       [bundleId]: pollInterval
     }));
-  }, [onFilesUploaded, completeTask, failTask]);
+  }, [onFilesUploaded]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,

@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthContext, useDatabaseContext } from "@/components/providers";
+import { useAuthContext } from "@/components/providers";
 import { useDatabaseOperations } from "@/lib/hooks/use-database-operations";
-import { useTaskCreator } from "@/components/task-manager";
 import { toast } from "sonner";
 import {
   Database,
@@ -17,17 +16,20 @@ import { PageLayout } from "@/components/layout/PageLayout";
 import { DatabaseQueryPageHeader } from "@/components/database-query/components";
 import { QuickSuggestions } from "@/components/file-query/QuickSuggestions";
 import { DatabaseQueryCard } from "@/components/database-query/DatabaseQueryCard";
+import { DatabaseSelector } from "@/components/selectors";
 
 export function DatabaseQueryContent() {
   const router = useRouter();
   const { user } = useAuthContext();
-  const { currentDatabase, hasCurrentDatabase } = useDatabaseContext();
   const {
     loading,
     error,
     sendQuery,
   } = useDatabaseOperations();
-  const { createQueryTask, executeTask } = useTaskCreator();
+
+  // Database selection state
+  const [selectedDatabaseId, setSelectedDatabaseId] = useState<number | null>(null);
+  const [selectedDatabaseName, setSelectedDatabaseName] = useState<string>("");
 
   // State
   const [showHistory, setShowHistory] = useState(false);
@@ -117,7 +119,8 @@ export function DatabaseQueryContent() {
       return;
     }
 
-    if (!hasCurrentDatabase) {
+    // Validate that a database is selected
+    if (!selectedDatabaseId) {
       toast.error("Please select a database first");
       return;
     }
@@ -127,65 +130,43 @@ export function DatabaseQueryContent() {
       return;
     }
 
-    // Create a background task for query execution
-    const taskId = createQueryTask(
-      `Query: ${query.substring(0, 50)}${query.length > 50 ? '...' : ''}`,
-      `Executing database query: "${query}"`,
-      {
-        user_id: user.user_id,
+    try {
+      setCurrentQuery(query);
+      setQueryInput(query);
+      console.log("Sending database query with database ID:", selectedDatabaseId);
+
+      const response = await sendQuery({
+        userId: user.user_id,
+        question: query,
+        db_id: selectedDatabaseId, // Use selected database ID
+        model: model || 'gemini',
+        table_agent_mode: 'hybrid',
+      });
+
+      console.log("Query response:", response);
+      toast.success("Query submitted successfully!");
+      
+      // Store query result in sessionStorage for the results page
+      const queryResult = {
         query: query,
-        database_id: currentDatabase?.db_id,
-      }
-    );
-
-    // Execute the task in background
-    executeTask(
-      taskId,
-      async () => {
-        try {
-          setCurrentQuery(query);
-          setQueryInput(query);
-          console.log("Sending database query with user ID:", user.user_id);
-
-          const response = await sendQuery({
-            userId: user.user_id,
-            question: query,
-            db_id: currentDatabase?.db_id,
-            model: model || 'gemini',
-            table_agent_mode: 'hybrid',
-          });
-
-          console.log("Query response:", response);
-          toast.success("Query submitted successfully!");
-          
-          // Store query result in sessionStorage for the results page
-          const queryResult = {
-            query: query,
-            userId: user.user_id,
-            timestamp: new Date().toISOString(),
-            result: {
-              data: response.data?.data || [],
-              model_used: response.data?.model_used || 'gemini',
-              sql: response.data?.sql || ''
-            }
-          };
-          sessionStorage.setItem("databaseQueryResult", JSON.stringify(queryResult));
-          
-          // Show result overlay
-          setCompletedQuery(query);
-          setShowResultOverlay(true);
-          
-          return response;
-        } catch (error) {
-          console.error("Query failed:", error);
-          toast.error("Failed to execute query. Please try again.");
-          throw error;
+        userId: user.user_id,
+        timestamp: new Date().toISOString(),
+        result: {
+          data: response.data?.data || [],
+          model_used: response.data?.model_used || 'gemini',
+          sql: response.data?.sql || ''
         }
-      }
-    ).catch((error) => {
-      console.error("Failed to execute query:", error);
-    });
-  }, [user?.user_id, hasCurrentDatabase, currentDatabase?.db_id, sendQuery, createQueryTask, executeTask]);
+      };
+      sessionStorage.setItem("databaseQueryResult", JSON.stringify(queryResult));
+      
+      // Show result overlay
+      setCompletedQuery(query);
+      setShowResultOverlay(true);
+    } catch (error) {
+      console.error("Query failed:", error);
+      toast.error("Failed to execute query. Please try again.");
+    }
+  }, [user?.user_id, selectedDatabaseId, sendQuery]);
 
   const handleViewResults = useCallback(() => {
     setShowResultOverlay(false);
@@ -238,6 +219,18 @@ export function DatabaseQueryContent() {
         />
       </div>
 
+      {/* Database Selector */}
+      <div className="px-4 sm:px-6 lg:px-32 mb-6">
+        <DatabaseSelector
+          selectedDatabaseId={selectedDatabaseId}
+          onDatabaseSelect={(dbId, dbName) => {
+            setSelectedDatabaseId(dbId);
+            setSelectedDatabaseName(dbName);
+            toast.success(`Selected Database: ${dbName}`);
+          }}
+        />
+      </div>
+
       {/* Main Content - Full Width */}
       <div className="px-4 sm:px-6 lg:px-32 mb-16 max-sm:mb-12 sm:mb-16">
         <div className="space-y-6 max-sm:space-y-4 sm:space-y-6">
@@ -246,9 +239,11 @@ export function DatabaseQueryContent() {
             setQuery={setQueryInput}
             isExecuting={loading}
             onExecuteClick={(model) => handleQuerySubmit(queryInput, model)}
-            hasDatabase={hasCurrentDatabase}
+            hasDatabase={!!selectedDatabaseId}
             userId={user?.user_id}
             stopTypewriter={stopTypewriter}
+            progress={queryProgress}
+            currentStep={processingSteps[Math.min(Math.floor((queryProgress / 100) * processingSteps.length), processingSteps.length - 1)] || "Processing..."}
           />
         </div>
       </div>

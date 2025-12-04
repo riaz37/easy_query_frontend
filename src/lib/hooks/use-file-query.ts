@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { ServiceRegistry } from "../api";
-import type { SearchQueryParams } from "../api";
+import { fileService } from "../api/services/file-service";
+import type { FilesSearchRequest } from "@/types/api";
 
 /**
- * Hook for making file queries using standardized ServiceRegistry
+ * Hook for making file queries using fileService
  */
 export function useFileQuery() {
   const [loading, setLoading] = useState(false);
@@ -12,26 +12,21 @@ export function useFileQuery() {
   const [rawResponse, setRawResponse] = useState<any>(null);
 
   /**
-   * Send a query to the API
+   * Send a file query to the API
    */
-  const sendQuery = async (params: SearchQueryParams & { user_id?: string }) => {
+  const sendQuery = async (params: FilesSearchRequest) => {
     setLoading(true);
     setError(null);
     setResponse(null);
     setRawResponse(null);
 
     try {
-      // Ensure user_id is included in the search params
-      const searchParams = {
-        ...params,
-        user_id: params.user_id, // Pass user_id to the API
-      };
-      
-      const result = await ServiceRegistry.query.search(searchParams);
+      const result = await fileService.searchFiles(params);
       
       if (result.success) {
         setRawResponse(result);
-        setResponse(result.data?.answer || result.data);
+        // Extract answer from the response structure
+        setResponse(result.data?.answer?.answer || result.data);
       } else {
         throw new Error(result.error || "Query failed");
       }

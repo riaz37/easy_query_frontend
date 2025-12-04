@@ -3,6 +3,7 @@
 import React from "react";
 import { DatabaseQueryHeader } from "./DatabaseQueryHeader";
 import { QueryForm } from "@/components/shared/QueryForm";
+import { QueryProgress } from "@/components/shared/QueryProgress";
 
 interface DatabaseQueryCardProps {
   query: string;
@@ -13,6 +14,8 @@ interface DatabaseQueryCardProps {
   userId?: string;
   className?: string;
   stopTypewriter?: boolean;
+  progress?: number;
+  currentStep?: string;
 }
 
 export function DatabaseQueryCard({
@@ -23,6 +26,7 @@ export function DatabaseQueryCard({
   hasDatabase,
   className = "",
   stopTypewriter = false,
+  ...props
 }: DatabaseQueryCardProps) {
   return (
     <div
@@ -45,6 +49,14 @@ export function DatabaseQueryCard({
           stopTypewriter={stopTypewriter}
           showModelSelector={true}
         />
+        {isExecuting && (
+          <div className="mt-4 px-2">
+            <QueryProgress 
+              progress={props.progress || 0} 
+              currentStep={props.currentStep || "Processing..."} 
+            />
+          </div>
+        )}
       </div>
     </div>
   );

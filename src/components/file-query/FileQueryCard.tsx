@@ -3,6 +3,7 @@
 import React from "react";
 import { FileQueryHeader } from "./FileQueryHeader";
 import { QueryForm } from "@/components/shared/QueryForm";
+import { QueryProgress } from "@/components/shared/QueryProgress";
 
 interface FileQueryCardProps {
   query: string;
@@ -12,6 +13,8 @@ interface FileQueryCardProps {
   onExecuteClick: () => void;
   className?: string;
   stopTypewriter?: boolean;
+  progress?: number;
+  currentStep?: string;
 }
 
 export function FileQueryCard({
@@ -22,6 +25,7 @@ export function FileQueryCard({
   onExecuteClick,
   className = "",
   stopTypewriter = false,
+  ...props
 }: FileQueryCardProps) {
   return (
     <div
@@ -42,6 +46,14 @@ export function FileQueryCard({
         enableTypewriter={true}
         stopTypewriter={stopTypewriter}
       />
+      {isExecuting && (
+        <div className="mt-4 px-2">
+          <QueryProgress 
+            progress={props.progress || 0} 
+            currentStep={props.currentStep || "Processing..."} 
+          />
+        </div>
+      )}
     </div>
   );
 }

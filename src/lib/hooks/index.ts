@@ -17,7 +17,6 @@ export { useFileOperations, useSmartFileUpload } from "./use-smart-file-upload";
 
 // UI and utility hooks
 export { useToast } from "./use-toast";
-export { useUserSettings } from "./use-user-settings";
-export { useThemeTransition } from "./useThemeTransition";
+
 
 
