@@ -206,10 +206,10 @@ export function TablesManager() {
             onValueChange={handleDatabaseChange}
             disabled={databasesLoading || databases.length === 0}
           >
-            <SelectTrigger className="w-[300px] bg-slate-800/50 border-slate-600 text-white">
+            <SelectTrigger className="w-[300px] modal-select-enhanced text-white">
               {databasesLoading ? (
                 <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
                   <span>Loading databases...</span>
                 </div>
               ) : databases.length === 0 ? (
@@ -220,18 +220,18 @@ export function TablesManager() {
                 </SelectValue>
               )}
             </SelectTrigger>
-            <SelectContent className="bg-slate-800 border-slate-600">
+            <SelectContent className="modal-select-content-enhanced">
               {databases.map((database) => (
                 <SelectItem
                   key={database.db_id}
                   value={database.db_id.toString()}
-                  className="text-white hover:bg-slate-700 focus:bg-slate-700"
+                  className="dropdown-item text-white"
                 >
-                  <div className="flex items-center gap-2">
-                    <Database className="h-4 w-4 text-emerald-400" />
-                    <span>{database.db_name}</span>
+                  <div className="flex items-center gap-2 w-full">
+                    <Database className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                    <span className="flex-1">{database.db_name}</span>
                     {database.db_id === dbId && (
-                      <span className="ml-auto text-xs text-emerald-400">(Current)</span>
+                      <span className="ml-auto text-xs text-emerald-400 font-semibold">(Current)</span>
                     )}
                   </div>
                 </SelectItem>

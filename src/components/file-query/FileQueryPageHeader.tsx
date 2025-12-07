@@ -6,20 +6,20 @@ import { History } from "lucide-react";
 
 interface FileQueryPageHeaderProps {
   onHistoryClick: () => void;
-  username?: string;
+  userid?: string;
   className?: string;
 }
 
 export function FileQueryPageHeader({ 
   onHistoryClick, 
-  username = "",
+  userid = "",
   className = "" 
 }: FileQueryPageHeaderProps) {
   return (
     <div className={`flex items-center justify-between mb-8 ${className}`}>
       <div>
         <h1 className="text-4xl font-bold mb-2 block gradient-text-primary">
-          Hi there, {username}
+          Hi there, {userid}
         </h1>
         <p className="text-xl block gradient-text-primary">
           What would you like to know?

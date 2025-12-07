@@ -380,7 +380,7 @@ function FileQueryPageContent() {
                     backgroundRepeat: "no-repeat",
                   }}
                 >
-                  Hi there, {user?.username || ""}
+                  Hi there, {user?.user_id || ""}
                 </h1>
                 <p
                   className="text-xl block"

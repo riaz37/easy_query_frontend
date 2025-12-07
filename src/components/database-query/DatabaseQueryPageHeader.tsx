@@ -6,20 +6,20 @@ import Image from "next/image";
 
 interface DatabaseQueryPageHeaderProps {
   onHistoryClick: () => void;
-  username?: string;
+  userid?: string;
   className?: string;
 }
 
 export function DatabaseQueryPageHeader({ 
   onHistoryClick, 
-  username = "",
+  userid = "",
   className = "" 
 }: DatabaseQueryPageHeaderProps) {
   return (
     <div className={`flex items-center justify-between mb-8 ${className}`}>
       <div>
         <h1 className="text-4xl font-bold mb-2 block gradient-text-primary">
-          Hi there, {username}
+          Hi there, {userid}
         </h1>
         <p className="text-xl block gradient-text-primary">
           What would you like to know?

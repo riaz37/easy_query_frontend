@@ -218,7 +218,7 @@ export function DatabaseQueryContent() {
       <div className="px-4 sm:px-6 lg:px-32">
         <DatabaseQueryPageHeader
           onHistoryClick={handleToggleHistory}
-          username={user?.username || ""}
+          userid={user?.user_id || ""}
         />
       </div>
 

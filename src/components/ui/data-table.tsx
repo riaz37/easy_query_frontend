@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { ChevronUp, ChevronDown, MoreVertical, Filter, Loader2 } from "lucide-react";
 import FilterIcon from "@/sidebar/filterIcon";
+import { TableSkeleton } from "@/components/ui/loading";
 
 export type TableColumn = {
   key: string;
@@ -526,17 +527,23 @@ export function DataTable<TData>({
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-white/60" />
-                    <span className="text-white/60">Loading...</span>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <>
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={`skeleton-${index}`}>
+                    {columns.map((_, colIndex) => (
+                      <TableCell key={`skeleton-${index}-${colIndex}`} className="text-white/90">
+                        <div 
+                          className="h-5 rounded animate-pulse"
+                          style={{ 
+                            background: 'rgba(19, 245, 132, 0.08)',
+                            width: colIndex === 0 ? '80%' : colIndex === columns.length - 1 ? '60%' : '100%'
+                          }}
+                        />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </>
             ) : table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
                 <TableRow

@@ -20,6 +20,32 @@ export interface UserTableNamesResponse {
   table_names: string[];
 }
 
+export interface UserConfig {
+  config_id: number;
+  user_id: string;
+  db_id: number;
+  db_config: {
+    schema: string;
+    DB_HOST: string;
+    DB_NAME: string;
+    DB_PORT: number;
+    DB_USER: string;
+    DB_PASSWORD?: string;
+    [key: string]: any;
+  };
+  access_level: number;
+  accessible_tables: string[];
+  table_names: string[];
+  is_latest: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserConfigsResponse {
+  configs: UserConfig[];
+  count: number;
+}
+
 /**
  * Service for managing vector database operations
  * All methods use JWT authentication - user ID is extracted from token on backend
@@ -196,6 +222,91 @@ export class VectorDBService extends BaseService {
     const result = await this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_SET_USER_CONFIG, requestBody);
     
     // Invalidate user-related cache after creating vector DB access
+    if (result.success) {
+      CacheInvalidator.invalidateUsers();
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get all user configurations
+   * Returns all user configurations for vector DB
+   * API response structure: { status: "success", message: "...", data: { configs: [...], count: ... } }
+   */
+  async getAllUserConfigs(): Promise<ServiceResponse<UserConfigsResponse>> {
+    const response = await this.get<any>(API_ENDPOINTS.FMS_DB_CONFIG_GET_ALL_USER_CONFIGS);
+    
+    // Handle API response structure: { status: "success", message: "...", data: { configs: [...], count: ... } }
+    let configs: UserConfig[] = [];
+    let count = 0;
+    
+    if (response.data && typeof response.data === 'object') {
+      // Check if response.data is the API response object with nested data
+      if (response.data.status === 'success' && response.data.data) {
+        // API returns { status, message, data: { configs, count } }
+        configs = Array.isArray(response.data.data.configs) ? response.data.data.configs : [];
+        count = response.data.data.count || configs.length;
+      }
+      // If response.data is directly the data object
+      else if (response.data.configs) {
+        configs = Array.isArray(response.data.configs) ? response.data.configs : [];
+        count = response.data.count || configs.length;
+      }
+      // If response.data is directly an array (fallback)
+      else if (Array.isArray(response.data)) {
+        configs = response.data;
+        count = configs.length;
+      }
+    }
+    
+    return {
+      data: {
+        configs,
+        count,
+      },
+      success: true,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Create user configuration for vector DB
+   * Admin can assign vector DB configurations to users
+   */
+  async createUserConfig(request: {
+    user_id: string;
+    db_id: number;
+    access_level: number;
+    accessible_tables?: string[];
+    table_names?: string[];
+  }): Promise<ServiceResponse<any>> {
+    this.validateRequired(request, ['user_id', 'db_id', 'access_level']);
+    this.validateTypes(request, {
+      user_id: 'string',
+      db_id: 'number',
+      access_level: 'number',
+    });
+
+    if (request.db_id <= 0) {
+      throw this.createValidationError('db_id must be positive');
+    }
+
+    if (request.access_level < 0) {
+      throw this.createValidationError('access_level must be non-negative');
+    }
+
+    const requestBody = {
+      user_id: request.user_id,
+      db_id: request.db_id,
+      access_level: request.access_level,
+      accessible_tables: request.accessible_tables || [],
+      table_names: request.table_names || [],
+    };
+
+    const result = await this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_SET_USER_CONFIG, requestBody);
+    
+    // Invalidate user-related cache after creating user config
     if (result.success) {
       CacheInvalidator.invalidateUsers();
     }
