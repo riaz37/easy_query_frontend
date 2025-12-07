@@ -62,9 +62,9 @@ function FileQueryPageContent() {
   const [selectedConfigId, setSelectedConfigId] = useState<number | null>(null);
   const [selectedConfigName, setSelectedConfigName] = useState<string>("");
 
-  // Table selection state
+  // Folder selection state
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
-  const [useTable, setUseTable] = useState(false); // Track table usage from FileUpload - disabled by default
+  const [useTable, setUseTable] = useState(false); // Track folder usage from FileUpload - disabled by default
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -603,9 +603,9 @@ function FileQueryPageContent() {
               >
                 <TableSection
                   selectedTable={selectedTable}
-                  onTableSelect={(tableName) => {
-                    setSelectedTable(tableName);
-                    toast.success(`Selected table: ${tableName}`);
+                  onTableSelect={(folderName) => {
+                    setSelectedTable(folderName);
+                    toast.success(`Selected folder: ${folderName}`);
                   }}
                   configId={selectedConfigId}
                 />

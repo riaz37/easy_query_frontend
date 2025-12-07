@@ -19,7 +19,7 @@ export function UseTableToggle({
       <QueryToggle
         checked={useTable}
         onToggle={onToggle}
-        label="Use Table"
+        label="Use Folder"
         className={className}
       />
     </div>
