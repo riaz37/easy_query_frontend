@@ -9,7 +9,9 @@ import {
   Database,
   BarChart3,
   User,
+  AlertCircle,
 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { QueryHistoryPanel } from "@/components/database-query/QueryHistoryPanel";
 import { QueryResultOverlay } from "@/components/ui/query-result-overlay";
 import { PageLayout } from "@/components/layout/PageLayout";
@@ -17,6 +19,7 @@ import { DatabaseQueryPageHeader } from "@/components/database-query/components"
 import { QuickSuggestions } from "@/components/file-query/QuickSuggestions";
 import { DatabaseQueryCard } from "@/components/database-query/DatabaseQueryCard";
 import { DatabaseSelector } from "@/components/selectors";
+import { QueryPageTour } from "@/components/onboarding/QueryPageTour";
 
 export function DatabaseQueryContent() {
   const router = useRouter();
@@ -219,6 +222,23 @@ export function DatabaseQueryContent() {
         />
       </div>
 
+      {/* Database Selection Instruction */}
+      {!selectedDatabaseId && !loading && !showResultOverlay && (
+        <div className="px-4 sm:px-6 lg:px-32 mb-6">
+          <Alert className="bg-slate-800/50 border border-green-400/30 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <AlertDescription className="text-white">
+                  <span className="font-semibold text-green-400">Please select a database</span>{" "}
+                  from the dropdown above to start querying. This will be the data source for all your queries.
+                </AlertDescription>
+              </div>
+            </div>
+          </Alert>
+        </div>
+      )}
+
       {/* Main Content - Full Width */}
       <div className="px-4 sm:px-6 lg:px-32 mb-16 max-sm:mb-12 sm:mb-16">
         <div className="space-y-6 max-sm:space-y-4 sm:space-y-6">
@@ -294,6 +314,11 @@ export function DatabaseQueryContent() {
         queryText={completedQuery}
         queryMode="query"
       />
+
+      {/* Onboarding Tour */}
+      {!showResultOverlay && !loading && (
+        <QueryPageTour pageType="database" />
+      )}
       </div>
     </PageLayout>
   );

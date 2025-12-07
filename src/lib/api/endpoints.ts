@@ -14,9 +14,11 @@ export const API_ENDPOINTS = {
   // New Table Management endpoints
   NEW_TABLE_CREATE: `${baseUrl}/new-table/create`,
   NEW_TABLE_GET_DATA_TYPES: `${baseUrl}/new-table/data-types`,
-  NEW_TABLE_GET_USER_TABLES: (userId: string) => `${baseUrl}/new-table/user-tables/${encodeURIComponent(userId)}`,
+  NEW_TABLE_GET_USER_TABLES: (userId: string, dbId: number) => {
+    const baseEndpoint = `${baseUrl}/new-table/user-tables/${encodeURIComponent(userId)}`;
+    return `${baseEndpoint}?db_id=${dbId}`;
+  },
   NEW_TABLE_UPDATE_BUSINESS_RULE: (userId: string) => `${baseUrl}/new-table/user-business-rule/${encodeURIComponent(userId)}`,
-  NEW_TABLE_GET_BUSINESS_RULE: (userId: string) => `${baseUrl}/new-table/user-business-rule/${encodeURIComponent(userId)}`,
   NEW_TABLE_GET_TABLES_BY_DB: (dbId: number) => `${baseUrl}/new-table/tables/${dbId}`,
   NEW_TABLE_SETUP_TRACKING_TABLE: `${baseUrl}/new-table/setup-tracking-table`,
   NEW_TABLE_HEALTH: `${baseUrl}/new-table/health`,

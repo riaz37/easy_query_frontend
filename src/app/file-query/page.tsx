@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   FileText,
   CheckCircle,
@@ -38,6 +39,7 @@ import { copyToClipboard } from "@/lib/utils";
 import { AuthenticatedRoute } from "@/components/auth";
 import { VectorDBSelector } from "@/components/selectors";
 import { fileService } from "@/lib/api/services/file-service";
+import { QueryPageTour } from "@/components/onboarding/QueryPageTour";
 import type {
   UploadedFile,
   FileQueryResult,
@@ -536,6 +538,23 @@ function FileQueryPageContent() {
           </div>
         )}
 
+        {/* Vector DB Config Selection Instruction */}
+        {!selectedConfigId && !isExecuting && !structuredResponse && !queryError && (
+          <div className="px-4 sm:px-6 lg:px-32 mb-6">
+            <Alert className="bg-slate-800/50 border border-green-400/30 backdrop-blur-sm">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <AlertDescription className="text-white">
+                    <span className="font-semibold text-green-400">Please select a Vector DB configuration</span>{" "}
+                    from the dropdown above to start querying. This will be the data source for all your file queries.
+                  </AlertDescription>
+                </div>
+              </div>
+            </Alert>
+          </div>
+        )}
+
         {/* Table Toggle - Above Query Form */}
         <div className="px-4 sm:px-6 lg:px-32 mb-8">
           <UseTableToggle useTable={useTable} onToggle={setUseTable} />
@@ -561,6 +580,7 @@ function FileQueryPageContent() {
                 stopTypewriter={stopTypewriter}
                 progress={queryProgress}
                 currentStep={processingSteps[Math.min(Math.floor((queryProgress / 100) * processingSteps.length), processingSteps.length - 1)] || "Processing..."}
+                disabled={!selectedConfigId}
                 vectorDBSelector={
                   <VectorDBSelector
                     selectedConfigId={selectedConfigId}
@@ -587,7 +607,7 @@ function FileQueryPageContent() {
                     setSelectedTable(tableName);
                     toast.success(`Selected table: ${tableName}`);
                   }}
-                  currentDatabaseId={currentDatabaseId}
+                  configId={selectedConfigId}
                 />
               </div>
             )}
@@ -610,6 +630,11 @@ function FileQueryPageContent() {
           disabled={!isAuthenticated}
           configId={selectedConfigId}
         />
+
+        {/* Onboarding Tour */}
+        {!structuredResponse && !queryError && !isExecuting && (
+          <QueryPageTour pageType="file" />
+        )}
       </div>
     </PageLayout>
   );

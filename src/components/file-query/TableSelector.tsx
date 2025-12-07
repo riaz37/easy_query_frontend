@@ -9,13 +9,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 
 interface TableSelectorProps {
-  databaseId?: number | null;
+  configId?: number | null;
   onTableSelect: (tableName: string) => void;
   className?: string;
 }
 
 export function TableSelector({
-  databaseId,
+  configId,
   onTableSelect,
   className = "",
 }: TableSelectorProps) {
@@ -25,10 +25,11 @@ export function TableSelector({
   const [error, setError] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState<string>("");
 
-  // Get user tables from the API using authenticated service
-  const fetchUserTables = async () => {
-    if (!user?.user_id) {
-      setError("Please log in to view tables");
+  // Get tables for the selected config
+  const fetchTables = async () => {
+    if (!configId) {
+      setAvailableTables([]);
+      setError(null);
       return;
     }
 
@@ -36,9 +37,9 @@ export function TableSelector({
     setError(null);
 
     try {
-      // Use endpoint that requires user ID parameter
+      // Use configId to get table names
       const response = await ServiceRegistry.vectorDB.getUserTableNames(
-        user.user_id
+        configId
       );
 
       if (response.success && response.data && Array.isArray(response.data)) {
@@ -49,7 +50,7 @@ export function TableSelector({
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to fetch tables";
-      console.error("Failed to fetch user tables:", error);
+      console.error("Failed to fetch tables:", error);
       setError(errorMessage);
       toast.error("Failed to load tables", {
         description: errorMessage,
@@ -59,12 +60,15 @@ export function TableSelector({
     }
   };
 
-  // Fetch tables on mount and when databaseId changes
+  // Fetch tables when configId changes
   useEffect(() => {
-    if (user?.user_id) {
-      fetchUserTables();
+    if (configId) {
+      fetchTables();
+    } else {
+      setAvailableTables([]);
+      setError(null);
     }
-  }, [user?.user_id, databaseId]);
+  }, [configId]);
 
   // Handle table selection
   const handleTableSelect = (tableName: string) => {
@@ -73,13 +77,13 @@ export function TableSelector({
   };
 
 
-  if (!user?.user_id) {
+  if (!configId) {
     return (
       <div className={className}>
         <div className="flex flex-col items-center justify-center h-16">
           <Database className="h-6 w-6 text-gray-400" />
           <p className="text-gray-400 text-xs mt-1">
-            Please log in to view tables
+            Please select a Vector DB configuration to view tables
           </p>
         </div>
       </div>

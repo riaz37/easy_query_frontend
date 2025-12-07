@@ -41,6 +41,7 @@ interface YourTablesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId?: string;
+  dbId: number | null;
   onRefresh: () => void;
   onCreateTable: () => void;
 }
@@ -51,6 +52,7 @@ export function YourTablesModal({
   open,
   onOpenChange,
   userId,
+  dbId,
   onRefresh,
   onCreateTable,
 }: YourTablesModalProps) {
@@ -127,13 +129,10 @@ export function YourTablesModal({
 
   // Fetch user tables from API
   const fetchUserTables = useCallback(async () => {
-    if (!userId) return;
-    
     setLoading(true);
     setTableLoadError(null);
     try {
-      console.log("Loading user tables for userId:", userId);
-      const response = await getUserTables(userId);
+      const response = await getUserTables(userId!, dbId!);
       console.log("User tables response:", response);
       
       if (response && response.tables && Array.isArray(response.tables)) {
@@ -157,14 +156,14 @@ export function YourTablesModal({
     } finally {
       setLoading(false);
     }
-  }, [userId, getUserTables]);
+  }, [userId, dbId, getUserTables]);
 
   // Fetch user tables on component mount
   useEffect(() => {
-    if (open && userId) {
+    if (open && userId && dbId) {
       fetchUserTables();
     }
-  }, [open, userId, fetchUserTables]);
+  }, [open, userId, dbId, fetchUserTables]);
 
   // Reset pagination when data changes
   useEffect(() => {
@@ -281,6 +280,16 @@ export function YourTablesModal({
                     <p className="text-slate-400">Loading tables...</p>
                   </div>
                 </div>
+              ) : !dbId ? (
+                <div className="text-center py-12">
+                  <TableIcon className="h-12 w-12 text-slate-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-300 mb-2">
+                    No Database Selected
+                  </h3>
+                  <p className="text-slate-400 mb-6">
+                    Please select a database to view your tables
+                  </p>
+                </div>
               ) : transformedTables.length === 0 ? (
                 <div className="text-center py-12">
                   <TableIcon className="h-12 w-12 text-slate-500 mx-auto mb-4" />
@@ -294,7 +303,7 @@ export function YourTablesModal({
                     onClick={handleCreateTableClick}
                     className="modal-button-primary cursor-pointer"
                   >
-                      <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 mr-2" />
                     Create Table
                     </Button>
                 </div>

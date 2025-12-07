@@ -647,6 +647,7 @@ export interface ExcelToDBHealthResponse {
 
 export interface ExcelToDBPushDataRequest {
   user_id: string;
+  db_id: number;
   table_full_name: string;
   column_mapping: Record<string, string>; // Excel column name -> Database column name
   skip_first_row: boolean;
@@ -665,6 +666,7 @@ export interface ExcelToDBPushDataResponse {
 
 export interface ExcelToDBGetAIMappingRequest {
   user_id: string;
+  db_id: number;
   table_full_name: string;
   excel_file: File;
 }
@@ -701,6 +703,7 @@ export interface ExcelToDBGetAIMappingResponse {
 // New Table API Types (matching backend API structure)
 export interface NewTableCreateRequest {
   user_id: string;
+  db_id: number;
   table_name: string;
   schema: string;
   columns: Array<{

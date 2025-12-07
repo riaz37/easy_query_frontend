@@ -29,6 +29,7 @@ interface ExcelStep3MappingProps {
   selectedFile: File | null;
   selectedTable: string;
   userId: string;
+  dbId: number | null;
   onMappingComplete: (data: any) => void;
   onNext: () => void;
   onBack: () => void;
@@ -38,6 +39,7 @@ export function ExcelStep3Mapping({
   selectedFile,
   selectedTable,
   userId,
+  dbId,
   onMappingComplete,
   onNext,
   onBack,
@@ -63,21 +65,19 @@ export function ExcelStep3Mapping({
 
   // Fetch user tables to get table structure
   const fetchUserTables = useCallback(async () => {
-    if (!userId) return;
-
     try {
-      const response = await getUserTables(userId);
+      const response = await getUserTables(userId, dbId!);
       if (response && response.tables && Array.isArray(response.tables)) {
         setUserTables(response.tables);
       }
     } catch (error) {
       console.error("Failed to fetch user tables:", error);
     }
-  }, [userId, getUserTables]);
+  }, [userId, dbId, getUserTables]);
 
   // Get AI mapping suggestions
   const handleGetAIMapping = async () => {
-    if (!selectedFile || !selectedTable || !userId) {
+    if (!selectedFile || !selectedTable) {
       toast.error("Please select a file and table first");
       return;
     }
@@ -86,6 +86,7 @@ export function ExcelStep3Mapping({
     try {
       const response = await getAIMapping({
         user_id: userId,
+        db_id: dbId!,
         table_full_name: ensureTableFullName(selectedTable),
         excel_file: selectedFile,
       });
@@ -115,7 +116,11 @@ export function ExcelStep3Mapping({
         });
 
         setCustomMapping(initialMapping);
-        onMappingComplete(response);
+        // Pass both AI mapping response and custom mapping
+        onMappingComplete({
+          ...response,
+          customMapping: initialMapping,
+        });
         toast.success("AI mapping suggestions generated successfully");
       } else {
         console.warn("Invalid AI mapping response structure:", response);
@@ -331,7 +336,16 @@ export function ExcelStep3Mapping({
         </Button>
 
         <Button
-          onClick={onNext}
+          onClick={() => {
+            // Update mapping data with current custom mapping before proceeding
+            if (aiMappingData) {
+              onMappingComplete({
+                ...aiMappingData,
+                customMapping: customMapping,
+              });
+            }
+            onNext();
+          }}
           disabled={Object.keys(customMapping).length === 0}
           className="modal-button-primary"
         >

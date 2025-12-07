@@ -72,6 +72,39 @@ export function CreateTableModal({
 
   const handleSubmit = () => {
     setLocalError(null);
+    
+    // Validate table name
+    if (!tableName.trim()) {
+      setLocalError("Table name is required");
+      return;
+    }
+    
+    // Validate schema
+    if (!schema.trim()) {
+      setLocalError("Schema is required");
+      return;
+    }
+    
+    // Validate columns
+    const columnErrors: string[] = [];
+    columns.forEach((column, index) => {
+      if (!column.name.trim()) {
+        columnErrors.push(`Column ${index + 1}: name is required`);
+      }
+      if (!column.data_type.trim()) {
+        columnErrors.push(`Column ${index + 1}: data type is required`);
+      }
+      const validationError = validateColumnData(column);
+      if (validationError) {
+        columnErrors.push(`Column ${index + 1}: ${validationError}`);
+      }
+    });
+    
+    if (columnErrors.length > 0) {
+      setLocalError(columnErrors[0]); // Show first error
+      return;
+    }
+    
     onSubmit({ tableName, schema, columns });
   };
 
@@ -88,20 +121,21 @@ export function CreateTableModal({
   };
 
   const validateColumnData = (column: TableColumn): string | null => {
+    // Check if data type requires length but doesn't have it
+    const requiresLength = ['VARCHAR', 'NVARCHAR', 'CHAR', 'NCHAR', 'BINARY', 'VARBINARY'];
+    const dataTypeUpper = column.data_type.toUpperCase();
+    const needsLength = requiresLength.some(type => dataTypeUpper.startsWith(type));
+    
+    if (needsLength && !column.data_type.includes('(')) {
+      return `${column.data_type} requires a length specification (e.g., ${column.data_type}(50))`;
+    }
+
+    // Check identity column compatibility
     if (
       column.is_identity &&
-      ![
-        "INT",
-        "INTEGER",
-        "BIGINT",
-        "SMALLINT",
-        "TINYINT",
-        "DECIMAL",
-        "FLOAT",
-        "DOUBLE",
-      ].includes(column.data_type)
+      !dataTypeUpper.match(/^(INT|BIGINT|SMALLINT|TINYINT|DECIMAL|NUMERIC|FLOAT|REAL)/)
     ) {
-      return `Identity columns can only be used with numeric data types (INT, BIGINT, etc.), not with ${column.data_type}`;
+      return `Identity columns can only be used with numeric data types (INT, BIGINT, DECIMAL, etc.), not with ${column.data_type}`;
     }
 
     return null;
@@ -268,29 +302,54 @@ export function CreateTableModal({
                                   <SelectValue placeholder="Select data type" />
                                 </SelectTrigger>
                                 <SelectContent className="modal-select-content-enhanced">
+                                  {/* String Types */}
                                   <SelectItem
-                                    value="VARCHAR"
+                                    value="VARCHAR(50)"
                                     className="dropdown-item"
                                   >
-                                    VARCHAR
+                                    VARCHAR(50)
                                   </SelectItem>
                                   <SelectItem
-                                    value="NVARCHAR"
+                                    value="VARCHAR(100)"
                                     className="dropdown-item"
                                   >
-                                    NVARCHAR
+                                    VARCHAR(100)
                                   </SelectItem>
                                   <SelectItem
-                                    value="CHAR"
+                                    value="VARCHAR(255)"
                                     className="dropdown-item"
                                   >
-                                    CHAR
+                                    VARCHAR(255)
                                   </SelectItem>
                                   <SelectItem
-                                    value="NCHAR"
+                                    value="NVARCHAR(50)"
                                     className="dropdown-item"
                                   >
-                                    NCHAR
+                                    NVARCHAR(50)
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="NVARCHAR(100)"
+                                    className="dropdown-item"
+                                  >
+                                    NVARCHAR(100)
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="NVARCHAR(255)"
+                                    className="dropdown-item"
+                                  >
+                                    NVARCHAR(255)
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="CHAR(10)"
+                                    className="dropdown-item"
+                                  >
+                                    CHAR(10)
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="NCHAR(10)"
+                                    className="dropdown-item"
+                                  >
+                                    NCHAR(10)
                                   </SelectItem>
                                   <SelectItem
                                     value="TEXT"
@@ -304,29 +363,12 @@ export function CreateTableModal({
                                   >
                                     NTEXT
                                   </SelectItem>
+                                  {/* Numeric Types */}
                                   <SelectItem
-                                    value="INT"
+                                    value="BIT"
                                     className="dropdown-item"
                                   >
-                                    INT
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="INTEGER"
-                                    className="dropdown-item"
-                                  >
-                                    INTEGER
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="BIGINT"
-                                    className="dropdown-item"
-                                  >
-                                    BIGINT
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="SMALLINT"
-                                    className="dropdown-item"
-                                  >
-                                    SMALLINT
+                                    BIT
                                   </SelectItem>
                                   <SelectItem
                                     value="TINYINT"
@@ -335,16 +377,34 @@ export function CreateTableModal({
                                     TINYINT
                                   </SelectItem>
                                   <SelectItem
-                                    value="DECIMAL"
+                                    value="SMALLINT"
                                     className="dropdown-item"
                                   >
-                                    DECIMAL
+                                    SMALLINT
                                   </SelectItem>
                                   <SelectItem
-                                    value="NUMERIC"
+                                    value="INT"
                                     className="dropdown-item"
                                   >
-                                    NUMERIC
+                                    INT
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="BIGINT"
+                                    className="dropdown-item"
+                                  >
+                                    BIGINT
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="DECIMAL(18,2)"
+                                    className="dropdown-item"
+                                  >
+                                    DECIMAL(18,2)
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="NUMERIC(18,2)"
+                                    className="dropdown-item"
+                                  >
+                                    NUMERIC(18,2)
                                   </SelectItem>
                                   <SelectItem
                                     value="FLOAT"
@@ -359,17 +419,18 @@ export function CreateTableModal({
                                     REAL
                                   </SelectItem>
                                   <SelectItem
-                                    value="DOUBLE"
+                                    value="MONEY"
                                     className="dropdown-item"
                                   >
-                                    DOUBLE
+                                    MONEY
                                   </SelectItem>
                                   <SelectItem
-                                    value="BIT"
+                                    value="SMALLMONEY"
                                     className="dropdown-item"
                                   >
-                                    BIT
+                                    SMALLMONEY
                                   </SelectItem>
+                                  {/* Date/Time Types */}
                                   <SelectItem
                                     value="DATE"
                                     className="dropdown-item"
@@ -381,6 +442,12 @@ export function CreateTableModal({
                                     className="dropdown-item"
                                   >
                                     TIME
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="SMALLDATETIME"
+                                    className="dropdown-item"
+                                  >
+                                    SMALLDATETIME
                                   </SelectItem>
                                   <SelectItem
                                     value="DATETIME"
@@ -395,40 +462,36 @@ export function CreateTableModal({
                                     DATETIME2
                                   </SelectItem>
                                   <SelectItem
-                                    value="SMALLDATETIME"
+                                    value="DATETIMEOFFSET"
                                     className="dropdown-item"
                                   >
-                                    SMALLDATETIME
+                                    DATETIMEOFFSET
+                                  </SelectItem>
+                                  {/* Binary Types */}
+                                  <SelectItem
+                                    value="BINARY(50)"
+                                    className="dropdown-item"
+                                  >
+                                    BINARY(50)
                                   </SelectItem>
                                   <SelectItem
-                                    value="TIMESTAMP"
+                                    value="VARBINARY(50)"
                                     className="dropdown-item"
                                   >
-                                    TIMESTAMP
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="UNIQUEIDENTIFIER"
-                                    className="dropdown-item"
-                                  >
-                                    UNIQUEIDENTIFIER
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="BINARY"
-                                    className="dropdown-item"
-                                  >
-                                    BINARY
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="VARBINARY"
-                                    className="dropdown-item"
-                                  >
-                                    VARBINARY
+                                    VARBINARY(50)
                                   </SelectItem>
                                   <SelectItem
                                     value="IMAGE"
                                     className="dropdown-item"
                                   >
                                     IMAGE
+                                  </SelectItem>
+                                  {/* Other Types */}
+                                  <SelectItem
+                                    value="UNIQUEIDENTIFIER"
+                                    className="dropdown-item"
+                                  >
+                                    UNIQUEIDENTIFIER
                                   </SelectItem>
                                   <SelectItem
                                     value="XML"
@@ -437,10 +500,10 @@ export function CreateTableModal({
                                     XML
                                   </SelectItem>
                                   <SelectItem
-                                    value="JSON"
+                                    value="SQL_VARIANT"
                                     className="dropdown-item"
                                   >
-                                    JSON
+                                    SQL_VARIANT
                                   </SelectItem>
                                 </SelectContent>
                               </Select>

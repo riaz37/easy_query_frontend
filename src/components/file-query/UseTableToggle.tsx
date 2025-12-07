@@ -15,11 +15,13 @@ export function UseTableToggle({
   className = "" 
 }: UseTableToggleProps) {
   return (
-    <QueryToggle
-      checked={useTable}
-      onToggle={onToggle}
-      label="Use Table"
-      className={className}
-    />
+    <div data-tour="table-toggle">
+      <QueryToggle
+        checked={useTable}
+        onToggle={onToggle}
+        label="Use Table"
+        className={className}
+      />
+    </div>
   );
 }

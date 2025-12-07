@@ -19,6 +19,7 @@ interface ExcelImportModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId: string;
+  dbId: number | null;
   availableTables: any[];
   onViewTableData: (tableName: string) => void;
 }
@@ -33,6 +34,7 @@ export function ExcelImportModal({
   open,
   onOpenChange,
   userId,
+  dbId,
   availableTables,
   onViewTableData,
 }: ExcelImportModalProps) {
@@ -84,6 +86,7 @@ export function ExcelImportModal({
         return (
           <ExcelStep2SelectDestination
             userId={userId}
+            dbId={dbId}
             availableTables={availableTables}
             selectedTable={selectedTable}
             onTableSelect={handleTableSelect}
@@ -97,6 +100,7 @@ export function ExcelImportModal({
             selectedFile={selectedFile}
             selectedTable={selectedTable}
             userId={userId}
+            dbId={dbId}
             onMappingComplete={handleMappingComplete}
             onNext={() => setCurrentStep("confirm")}
             onBack={() => setCurrentStep("select-destination")}
@@ -109,6 +113,7 @@ export function ExcelImportModal({
             selectedTable={selectedTable}
             mappingData={mappingData}
             userId={userId}
+            dbId={dbId}
             onComplete={() => {
               handleReset();
               onViewTableData(selectedTable);

@@ -27,15 +27,30 @@ export class NewTableService extends BaseService {
   async createTable(
     request: NewTableCreateRequest
   ): Promise<ServiceResponse<NewTableCreateResponse>> {
-    this.validateRequired(request, ['user_id', 'table_name', 'columns']);
+    this.validateRequired(request, ['user_id', 'db_id', 'table_name', 'columns']);
     this.validateTypes(request, {
       user_id: 'string',
+      db_id: 'number',
       table_name: 'string',
       schema: 'string',
     });
+    
+    if (request.db_id <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
 
     if (request.table_name.trim().length === 0) {
       throw this.createValidationError('Table name cannot be empty');
+    }
+    
+    // Validate schema
+    if (!request.schema || request.schema.trim().length === 0) {
+      throw this.createValidationError('Schema cannot be empty');
+    }
+    
+    // Validate schema format
+    if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(request.schema)) {
+      throw this.createValidationError('Schema must start with a letter and contain only letters, numbers, and underscores');
     }
 
     if (!Array.isArray(request.columns) || request.columns.length === 0) {
@@ -234,17 +249,22 @@ export class NewTableService extends BaseService {
   }
 
   /**
-   * Get user tables
+   * Get user tables and business rule
+   * Returns both tables and business rule for a specific user and database
    */
-  async getUserTables(userId: string): Promise<ServiceResponse<UserTablesResponse['data']>> {
-    this.validateTypes({ userId }, { userId: 'string' });
+  async getUserTables(userId: string, dbId: number): Promise<ServiceResponse<UserTablesResponse['data']>> {
+    this.validateTypes({ userId, dbId }, { userId: 'string', dbId: 'number' });
     
     if (!userId.trim()) {
       throw this.createValidationError('User ID is required');
     }
 
+    if (dbId <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
+
     return this.get<UserTablesResponse['data']>(
-      API_ENDPOINTS.NEW_TABLE_GET_USER_TABLES(userId)
+      API_ENDPOINTS.NEW_TABLE_GET_USER_TABLES(userId, dbId)
     );
   }
 
@@ -272,12 +292,17 @@ export class NewTableService extends BaseService {
 
   /**
    * Update user business rule
+   * Requires db_id in the request body along with business_rule
    */
-  async updateUserBusinessRule(userId: string, businessRule: string): Promise<ServiceResponse<any>> {
-    this.validateTypes({ userId, businessRule }, { userId: 'string', businessRule: 'string' });
+  async updateUserBusinessRule(userId: string, dbId: number, businessRule: string): Promise<ServiceResponse<any>> {
+    this.validateTypes({ userId, dbId, businessRule }, { userId: 'string', dbId: 'number', businessRule: 'string' });
     
     if (!userId.trim()) {
       throw this.createValidationError('User ID is required');
+    }
+
+    if (dbId <= 0) {
+      throw this.createValidationError('Database ID must be positive');
     }
     
     if (businessRule.trim().length === 0) {
@@ -286,22 +311,7 @@ export class NewTableService extends BaseService {
 
     return this.put<any>(
       API_ENDPOINTS.NEW_TABLE_UPDATE_BUSINESS_RULE(userId),
-      { business_rule: businessRule }
-    );
-  }
-
-  /**
-   * Get user business rule
-   */
-  async getUserBusinessRule(userId: string): Promise<ServiceResponse<any>> {
-    this.validateTypes({ userId }, { userId: 'string' });
-    
-    if (!userId.trim()) {
-      throw this.createValidationError('User ID is required');
-    }
-
-    return this.get<any>(
-      API_ENDPOINTS.NEW_TABLE_GET_BUSINESS_RULE(userId)
+      { business_rule: businessRule, db_id: dbId }
     );
   }
 

@@ -48,7 +48,7 @@ export function QuickSuggestions({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4 ${className}`} data-tour="suggestions">
       <h3 className="text-sm font-semibold text-white mb-6">
         {title}
       </h3>

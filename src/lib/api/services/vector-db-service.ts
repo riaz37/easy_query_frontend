@@ -136,14 +136,23 @@ export class VectorDBService extends BaseService {
     const endpoint = API_ENDPOINTS.FMS_DB_CONFIG_GET_TABLE_NAMES(configId);
     const response = await this.get<any>(endpoint);
     
-    // Handle different response structures
+    // Handle API response structure: { status: "success", message: "...", data: [...] }
     let tableNames: string[] = [];
     
-    if (response.data && Array.isArray(response.data)) {
-      tableNames = response.data;
-    } else if (response.data && typeof response.data === 'object') {
-      // Handle the case where response might have table_names property
-      tableNames = response.data.table_names || [];
+    // Check if response.data is the API response object with nested data
+    if (response.data && typeof response.data === 'object') {
+      // If response.data has a data property (nested structure)
+      if (Array.isArray(response.data.data)) {
+        tableNames = response.data.data;
+      } 
+      // If response.data is directly an array
+      else if (Array.isArray(response.data)) {
+        tableNames = response.data;
+      }
+      // If response.data has table_names property
+      else if (response.data.table_names && Array.isArray(response.data.table_names)) {
+        tableNames = response.data.table_names;
+      }
     }
     
     return {

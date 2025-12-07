@@ -44,11 +44,16 @@ export class ExcelToDBService extends BaseService {
   async pushDataToDatabase(
     request: ExcelToDBPushDataRequest
   ): Promise<ServiceResponse<ExcelToDBPushDataResponse>> {
-    this.validateRequired(request, ['user_id', 'table_full_name', 'column_mapping', 'excel_file']);
+    this.validateRequired(request, ['user_id', 'db_id', 'table_full_name', 'column_mapping', 'excel_file']);
     this.validateTypes(request, {
+      db_id: 'number',
       table_full_name: 'string',
       skip_first_row: 'boolean',
     });
+    
+    if (request.db_id <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
 
     if (request.table_full_name.trim().length === 0) {
       throw this.createValidationError('Table full name cannot be empty');
@@ -93,6 +98,7 @@ export class ExcelToDBService extends BaseService {
 
     const formData = new FormData();
     formData.append('user_id', request.user_id);
+    formData.append('db_id', String(request.db_id));
     formData.append('table_full_name', request.table_full_name);
     formData.append('column_mapping', JSON.stringify(request.column_mapping));
     formData.append('skip_first_row', String(request.skip_first_row ?? true));
@@ -123,8 +129,15 @@ export class ExcelToDBService extends BaseService {
   async getAIMapping(
     request: ExcelToDBGetAIMappingRequest
   ): Promise<ServiceResponse<ExcelToDBGetAIMappingResponse>> {
-    this.validateRequired(request, ['user_id', 'table_full_name', 'excel_file']);
-    this.validateTypes(request, { table_full_name: 'string' });
+    this.validateRequired(request, ['user_id', 'db_id', 'table_full_name', 'excel_file']);
+    this.validateTypes(request, { 
+      db_id: 'number',
+      table_full_name: 'string' 
+    });
+    
+    if (request.db_id <= 0) {
+      throw this.createValidationError('Database ID must be positive');
+    }
 
     if (request.table_full_name.trim().length === 0) {
       throw this.createValidationError('Table full name cannot be empty');
@@ -152,6 +165,7 @@ export class ExcelToDBService extends BaseService {
 
     const formData = new FormData();
     formData.append('user_id', request.user_id);
+    formData.append('db_id', String(request.db_id));
     formData.append('table_full_name', request.table_full_name);
     formData.append('excel_file', request.excel_file);
 

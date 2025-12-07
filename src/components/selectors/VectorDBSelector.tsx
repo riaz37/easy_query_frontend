@@ -56,6 +56,7 @@ export function VectorDBSelector({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
+          data-tour="vector-db-selector"
           className={`flex items-center justify-between px-3 py-1.5 rounded-[99px] transition-all ${className}`}
           style={{
             background: 'var(--components-button-Fill, rgba(255, 255, 255, 0.12))',

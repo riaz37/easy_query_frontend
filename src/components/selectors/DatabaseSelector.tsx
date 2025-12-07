@@ -62,6 +62,7 @@ export function DatabaseSelector({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
+          data-tour="database-selector"
           className={`flex items-center justify-between px-3 py-1.5 rounded-[99px] transition-all ${className}`}
           style={{
             background: 'var(--components-button-Fill, rgba(255, 255, 255, 0.12))',

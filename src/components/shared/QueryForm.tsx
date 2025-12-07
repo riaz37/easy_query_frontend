@@ -260,24 +260,25 @@ export function QueryForm({
       />
 
 
-      {/* Main contenteditable input */}
-      <div className="relative w-full">
-        <div
-          ref={contentEditableRef}
-          contentEditable={!disabled}
-          suppressContentEditableWarning={true}
-          onInput={handleInput}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onCompositionStart={handleCompositionStart}
-          onCompositionEnd={handleCompositionEnd}
-          onPaste={handlePaste}
-          role="textbox"
-          aria-multiline="true"
-          aria-label={placeholder}
-          data-virtualkeyboard="true"
-          className={`
+        {/* Main contenteditable input */}
+        <div className="relative w-full">
+          <div
+            ref={contentEditableRef}
+            data-tour="query-input"
+            contentEditable={!disabled}
+            suppressContentEditableWarning={true}
+            onInput={handleInput}
+            onKeyDown={handleKeyDown}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onCompositionStart={handleCompositionStart}
+            onCompositionEnd={handleCompositionEnd}
+            onPaste={handlePaste}
+            role="textbox"
+            aria-multiline="true"
+            aria-label={placeholder}
+            data-virtualkeyboard="true"
+            className={`
             w-full text-white resize-none bg-transparent border-0 outline-none focus:outline-none
             text-sm leading-relaxed min-h-[24px] max-h-[200px] overflow-hidden
             ${
@@ -349,6 +350,7 @@ export function QueryForm({
         {showUploadButton && onUploadClick && (
           <Button
             type="button"
+            data-tour="upload-button"
             variant="outline"
             onClick={onUploadClick}
             className="text-xs cursor-pointer"
@@ -386,6 +388,7 @@ export function QueryForm({
         
         <Button
           type="submit"
+          data-tour="execute-button"
           disabled={!query || !query.trim() || disabled}
           className="text-xs cursor-pointer"
           style={{

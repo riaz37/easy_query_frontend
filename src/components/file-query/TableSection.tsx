@@ -6,14 +6,14 @@ import { TableSelector } from "./TableSelector";
 interface TableSectionProps {
   selectedTable: string | null;
   onTableSelect: (tableName: string) => void;
-  currentDatabaseId: number | null;
+  configId: number | null;
   className?: string;
 }
 
 export function TableSection({
   selectedTable,
   onTableSelect,
-  currentDatabaseId,
+  configId,
   className = "",
 }: TableSectionProps) {
   return (
@@ -25,7 +25,7 @@ export function TableSection({
       </div>
       <div className="space-y-4">
         <TableSelector
-          databaseId={currentDatabaseId}
+          configId={configId}
           onTableSelect={onTableSelect}
         />
       </div>

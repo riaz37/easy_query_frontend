@@ -23,6 +23,7 @@ import type { UserTable } from "@/types/api";
 
 interface ExcelStep2SelectDestinationProps {
   userId: string;
+  dbId: number | null;
   availableTables: any[];
   selectedTable: string;
   onTableSelect: (table: string) => void;
@@ -32,6 +33,7 @@ interface ExcelStep2SelectDestinationProps {
 
 export function ExcelStep2SelectDestination({
   userId,
+  dbId,
   availableTables,
   selectedTable,
   onTableSelect,
@@ -48,12 +50,10 @@ export function ExcelStep2SelectDestination({
 
   // Fetch user tables from API
   const fetchUserTables = useCallback(async () => {
-    if (!userId) return;
-
     setIsLoadingTables(true);
     setTableLoadError(null);
     try {
-      const response = await getUserTables(userId);
+      const response = await getUserTables(userId, dbId!);
       if (response && response.tables && Array.isArray(response.tables)) {
         setUserTables(response.tables);
         setLastTablesUpdate(new Date());
@@ -76,14 +76,14 @@ export function ExcelStep2SelectDestination({
     } finally {
       setIsLoadingTables(false);
     }
-  }, [userId, getUserTables]);
+  }, [userId, dbId, getUserTables]);
 
   // Fetch user tables on component mount
   useEffect(() => {
-    if (userId) {
+    if (userId && dbId) {
       fetchUserTables();
     }
-  }, [userId, fetchUserTables]);
+  }, [userId, dbId, fetchUserTables]);
 
   // Transform user table data to match the expected format
   const transformedTables = userTables.map((table) => ({
@@ -124,6 +124,14 @@ export function ExcelStep2SelectDestination({
                   <div className="flex items-center justify-center w-full py-2">
                     <Loader2 className="h-5 w-5 animate-spin text-green-400 mr-2" />
                     <span className="text-gray-400">Loading tables...</span>
+                  </div>
+                </SelectItem>
+              ) : !dbId ? (
+                <SelectItem value="no-db" disabled className="dropdown-item">
+                  <div className="text-center py-4 text-gray-400">
+                    <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No Database Selected</p>
+                    <p className="text-xs">Please select a database first</p>
                   </div>
                 </SelectItem>
               ) : displayTables.length > 0 ? (

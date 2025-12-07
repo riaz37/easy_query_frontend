@@ -23,6 +23,7 @@ interface ExcelStep4ConfirmProps {
   selectedTable: string;
   mappingData: any;
   userId: string;
+  dbId: number | null;
   onComplete: () => void;
   onBack: () => void;
 }
@@ -32,6 +33,7 @@ export function ExcelStep4Confirm({
   selectedTable,
   mappingData,
   userId,
+  dbId,
   onComplete,
   onBack,
 }: ExcelStep4ConfirmProps) {
@@ -51,7 +53,7 @@ export function ExcelStep4Confirm({
 
   // Handle data import
   const handleImportData = async () => {
-    if (!selectedFile || !selectedTable || !userId || !mappingData) {
+    if (!selectedFile || !selectedTable || !mappingData) {
       toast.error("Please complete all previous steps first");
       return;
     }
@@ -61,9 +63,14 @@ export function ExcelStep4Confirm({
     setImportProgress(0);
 
     try {
-      // Extract custom mapping from mapping data
-      const customMapping: Record<string, string> = {};
-      if (mappingData.mapping_details) {
+      // Use custom mapping if provided, otherwise extract from mapping_details
+      let customMapping: Record<string, string> = {};
+      
+      if (mappingData.customMapping && Object.keys(mappingData.customMapping).length > 0) {
+        // Use the custom mapping from step 3
+        customMapping = mappingData.customMapping;
+      } else if (mappingData.mapping_details) {
+        // Fallback: Extract custom mapping from mapping data
         mappingData.mapping_details.forEach((detail: any) => {
           if (detail.is_mapped && detail.excel_column && detail.table_column) {
             const isIdentityColumn =
@@ -77,8 +84,14 @@ export function ExcelStep4Confirm({
         });
       }
 
+      // Validate that we have at least one column mapped
+      if (Object.keys(customMapping).length === 0) {
+        throw new Error("No columns are mapped. Please map at least one column in the previous step.");
+      }
+
       const response = await pushDataToDatabase({
         user_id: userId,
+        db_id: dbId!,
         table_full_name: ensureTableFullName(selectedTable),
         column_mapping: customMapping,
         skip_first_row: true, // Default to skip headers
