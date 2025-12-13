@@ -5,11 +5,11 @@ import { PageLayout, PageHeader } from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Database, 
-  Search, 
-  Plus, 
-  MoreVertical, 
+import {
+  Database,
+  Search,
+  Plus,
+  MoreVertical,
   RefreshCw,
   Trash2,
   Edit,
@@ -66,7 +66,7 @@ export default function DatabaseManagementPage() {
   const [databases, setDatabases] = useState<DatabaseConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Create/Edit State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -130,7 +130,7 @@ export default function DatabaseManagementPage() {
 
     try {
       setSubmitting(true);
-      
+
       const config = {
         db_name: currentDb.db_name,
         db_url: currentDb.db_url,
@@ -141,7 +141,7 @@ export default function DatabaseManagementPage() {
       let response;
       if (isEditMode && currentDb.db_id) {
         response = await adminService.updateDatabase(currentDb.db_id, config);
-        
+
         if (response.success) {
           toast.success("Database updated successfully");
           setIsDialogOpen(false);
@@ -153,15 +153,15 @@ export default function DatabaseManagementPage() {
       } else {
         // Creating new database
         response = await adminService.createDatabase(config as any);
-        
+
         if (response.success) {
           toast.success("Database created successfully");
           setIsDialogOpen(false);
           resetForm();
-          
+
           // Get db_id from response to trigger learn sync
           const dbId = response.data?.db_id || response.data?.data?.db_id || response.data?.id;
-          
+
           if (dbId && typeof dbId === 'number') {
             // Set up sync progress dialog
             setSyncDbName(config.db_name);
@@ -172,11 +172,11 @@ export default function DatabaseManagementPage() {
             setSyncStep(null);
             setSyncMessage(null);
             setIsSyncProgressOpen(true);
-            
+
             // Trigger learn sync and show progress
             try {
               const syncResponse = await adminService.triggerDatabaseLearnSync(dbId);
-              
+
               if (syncResponse.success && syncResponse.data?.task_id) {
                 setSyncTaskId(syncResponse.data.task_id);
                 setSyncStatus('running');
@@ -212,7 +212,7 @@ export default function DatabaseManagementPage() {
     try {
       setDeleting(true);
       const response = await adminService.deleteDatabase(dbToDelete.db_id);
-      
+
       if (response.success) {
         toast.success("Database deleted successfully");
         setIsDeleteDialogOpen(false);
@@ -242,12 +242,12 @@ export default function DatabaseManagementPage() {
 
       toast.info("Triggering Learn Sync...");
       const response = await adminService.triggerDatabaseLearnSync(dbId);
-      
+
       if (response.success && response.data?.task_id) {
         setSyncTaskId(response.data.task_id);
         setSyncStatus('running');
         // Start polling for progress
-        pollSyncProgress(response.data.task_id);
+        // Polling will start automatically via useEffect due to syncTaskId change
       } else {
         setSyncStatus('failed');
         setSyncError(response.error || "Failed to trigger Learn Sync");
@@ -273,24 +273,24 @@ export default function DatabaseManagementPage() {
 
       try {
         const response = await adminService.getDbQueryUpdateTaskStatus(syncTaskId);
-        
+
         if (isCancelled) return;
 
         if (response.success && response.data) {
           const taskData = response.data;
-          const status = taskData.status === 'completed' ? 'success' : 
-                        taskData.status === 'failed' ? 'failed' : 
-                        taskData.status === 'running' ? 'running' : 'pending';
-          
+          const status = taskData.status === 'completed' ? 'success' :
+            taskData.status === 'failed' ? 'failed' :
+              taskData.status === 'running' ? 'running' : 'pending';
+
           setSyncStatus(status);
-          
+
           // Extract progress percentage - API uses progress_percentage
-          const progressValue = taskData.progress_percentage || 
-                               taskData.progress || 
-                               taskData.percentage || 
-                               0;
+          const progressValue = taskData.progress_percentage ||
+            taskData.progress ||
+            taskData.percentage ||
+            0;
           setSyncProgress(typeof progressValue === 'number' ? progressValue : parseFloat(progressValue) || 0);
-          
+
           // Extract step information - API provides step_name, current_step, and total_steps
           let stepInfo = null;
           if (taskData.step_name) {
@@ -306,7 +306,7 @@ export default function DatabaseManagementPage() {
             // Fallback to message if no step_name
             stepInfo = taskData.message;
           }
-          
+
           setSyncStep(stepInfo);
           setSyncMessage(taskData.message || null);
 
@@ -368,7 +368,7 @@ export default function DatabaseManagementPage() {
     setIsDialogOpen(true);
   };
 
-  const filteredDatabases = databases.filter(db => 
+  const filteredDatabases = databases.filter(db =>
     db.db_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -406,36 +406,44 @@ export default function DatabaseManagementPage() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0 data-[state=open]:bg-white/10 data-[state=open]:text-white hover:bg-white/10 hover:text-white transition-colors"
+              >
                 <span className="sr-only">Open menu</span>
                 <MoreVertical className="h-4 w-4 text-gray-400" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#1a1f2e] border-white/10 text-white">
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem 
+            <DropdownMenuContent
+              align="end"
+              className="w-56 bg-[#0F1219]/95 backdrop-blur-xl border-white/10 text-white shadow-2xl z-50"
+            >
+              <DropdownMenuLabel className="font-barlow text-gray-400 text-xs font-normal uppercase tracking-wider">
+                Actions
+              </DropdownMenuLabel>
+              <DropdownMenuItem
                 onClick={() => handleLearnSync(db.db_id)}
-                className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                className="cursor-pointer focus:bg-emerald-500/10 focus:text-emerald-400 my-1 py-2.5 font-public-sans transition-colors"
               >
                 <Play className="mr-2 h-4 w-4" />
                 Trigger Learn Sync
               </DropdownMenuItem>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => openEditDialog(db)}
-                className="cursor-pointer hover:bg-white/5 focus:bg-white/5"
+                className="cursor-pointer focus:bg-white/10 focus:text-white my-1 py-2.5 font-public-sans transition-colors"
               >
                 <Edit className="mr-2 h-4 w-4" />
                 Edit Configuration
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onClick={() => {
                   setDbToDelete(db);
                   setIsDeleteDialogOpen(true);
                 }}
-                className="cursor-pointer text-red-400 hover:bg-red-500/10 focus:bg-red-500/10"
+                className="cursor-pointer text-red-400 focus:bg-red-500/10 focus:text-red-400 my-1 py-2.5 font-public-sans transition-colors"
               >
-                <Trash2 className="mr-2 h-4 w-4 text-red-400" />
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete Database
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -447,8 +455,8 @@ export default function DatabaseManagementPage() {
 
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
-      <PageHeader 
-        title="Database Management" 
+      <PageHeader
+        title="Database Management"
         description="Configure MSSQL databases and learning"
         icon={<Database className="w-6 h-6 text-emerald-400" />}
         actions={
@@ -463,8 +471,8 @@ export default function DatabaseManagementPage() {
         <div className="flex items-center mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input 
-              placeholder="Search databases..." 
+            <Input
+              placeholder="Search databases..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9 bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
@@ -475,9 +483,9 @@ export default function DatabaseManagementPage() {
           </Button>
         </div>
 
-        <DataTable 
-          columns={columns} 
-          data={filteredDatabases} 
+        <DataTable
+          columns={columns}
+          data={filteredDatabases}
           loading={loading}
         />
       </Card>
@@ -593,75 +601,74 @@ export default function DatabaseManagementPage() {
               </DialogHeader>
               <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
                 <div className="space-y-4 py-4">
-            {/* Status Icon and Text */}
-            <div className="flex items-center gap-3">
-              {syncStatus === 'pending' && <Clock className="w-5 h-5 text-gray-400" />}
-              {syncStatus === 'running' && <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />}
-              {syncStatus === 'success' && <CheckCircle className="w-5 h-5 text-emerald-400" />}
-              {syncStatus === 'failed' && <XCircle className="w-5 h-5 text-red-400" />}
-              <span className={`font-medium font-public-sans ${
-                syncStatus === 'pending' ? 'text-gray-400' :
-                syncStatus === 'running' ? 'text-emerald-400' :
-                syncStatus === 'success' ? 'text-emerald-400' :
-                'text-red-400'
-              }`}>
-                {syncStatus === 'pending' && 'Queued'}
-                {syncStatus === 'running' && 'Processing...'}
-                {syncStatus === 'success' && 'Completed'}
-                {syncStatus === 'failed' && 'Failed'}
-              </span>
-            </div>
+                  {/* Status Icon and Text */}
+                  <div className="flex items-center gap-3">
+                    {syncStatus === 'pending' && <Clock className="w-5 h-5 text-gray-400" />}
+                    {syncStatus === 'running' && <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />}
+                    {syncStatus === 'success' && <CheckCircle className="w-5 h-5 text-emerald-400" />}
+                    {syncStatus === 'failed' && <XCircle className="w-5 h-5 text-red-400" />}
+                    <span className={`font-medium font-public-sans ${syncStatus === 'pending' ? 'text-gray-400' :
+                      syncStatus === 'running' ? 'text-emerald-400' :
+                        syncStatus === 'success' ? 'text-emerald-400' :
+                          'text-red-400'
+                      }`}>
+                      {syncStatus === 'pending' && 'Queued'}
+                      {syncStatus === 'running' && 'Processing...'}
+                      {syncStatus === 'success' && 'Completed'}
+                      {syncStatus === 'failed' && 'Failed'}
+                    </span>
+                  </div>
 
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm text-gray-400 font-public-sans">
-                <span>Progress</span>
-                <span>{Math.round(syncProgress)}%</span>
-              </div>
-              <Progress value={syncProgress} className="h-2" />
-            </div>
+                  {/* Progress Bar */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-gray-400 font-public-sans">
+                      <span>Progress</span>
+                      <span>{Math.round(syncProgress)}%</span>
+                    </div>
+                    <Progress value={syncProgress} className="h-2" />
+                  </div>
 
-            {/* Current Step */}
-            {syncStep && (
-              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                <p className="text-sm text-white font-medium font-public-sans mb-1">Current Step:</p>
-                <p className="text-sm text-gray-300 font-public-sans">{syncStep}</p>
-              </div>
-            )}
+                  {/* Current Step */}
+                  {syncStep && (
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <p className="text-sm text-white font-medium font-public-sans mb-1">Current Step:</p>
+                      <p className="text-sm text-gray-300 font-public-sans">{syncStep}</p>
+                    </div>
+                  )}
 
-            {/* Status Message - Show if different from step */}
-            {syncMessage && syncMessage !== syncStep && (
-              <div className="p-3 rounded-lg bg-white/5 border border-white/10">
-                <p className="text-sm text-gray-300 font-public-sans">{syncMessage}</p>
-              </div>
-            )}
+                  {/* Status Message - Show if different from step */}
+                  {syncMessage && syncMessage !== syncStep && (
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                      <p className="text-sm text-gray-300 font-public-sans">{syncMessage}</p>
+                    </div>
+                  )}
 
-            {/* Error Message */}
-            {syncError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <p className="text-sm text-red-400 font-public-sans">{syncError}</p>
-              </div>
-            )}
+                  {/* Error Message */}
+                  {syncError && (
+                    <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                      <p className="text-sm text-red-400 font-public-sans">{syncError}</p>
+                    </div>
+                  )}
 
-            {/* Task ID (for debugging) */}
-            {syncTaskId && (
-              <div className="text-xs text-gray-500 font-public-sans">
-                Task ID: {syncTaskId}
-              </div>
-                )}
+                  {/* Task ID (for debugging) */}
+                  {syncTaskId && (
+                    <div className="text-xs text-gray-500 font-public-sans">
+                      Task ID: {syncTaskId}
+                    </div>
+                  )}
                 </div>
                 <DialogFooter className="px-0 pb-0 pt-4">
                   {syncStatus === 'success' || syncStatus === 'failed' ? (
-                    <Button 
-                      onClick={() => setIsSyncProgressOpen(false)} 
+                    <Button
+                      onClick={() => setIsSyncProgressOpen(false)}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow"
                     >
                       Close
                     </Button>
                   ) : (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsSyncProgressOpen(false)} 
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsSyncProgressOpen(false)}
                       className="border-white/10 text-white hover:bg-white/5 font-barlow"
                       disabled={syncStatus === 'running'}
                     >

@@ -1,6 +1,8 @@
 import { API_ENDPOINTS } from '../endpoints';
 import { BaseService, ServiceResponse } from './base';
 import { CacheInvalidator } from '../cache/cache-invalidator';
+import { authService } from './auth-service';
+import { storage } from '@/lib/utils/storage';
 
 /**
  * Database configuration information
@@ -28,10 +30,10 @@ export class DatabaseService extends BaseService {
   async getAllDatabases(): Promise<ServiceResponse<DatabaseInfo[]>> {
     // Use the new endpoint - will get all fields but we only use what we need
     const response = await this.get<any>(API_ENDPOINTS.MSSQL_CONFIG_GET_ALL);
-    
+
     // Transform MSSQL config data to DatabaseInfo format
     let databases: DatabaseInfo[] = [];
-    
+
     if (response.data && response.data.configs) {
       databases = response.data.configs.map((config: any) => ({
         id: config.db_id,
@@ -74,7 +76,7 @@ export class DatabaseService extends BaseService {
 
     // Find the specific database
     const config = response.data.configs.find((db: any) => db.db_id === databaseId);
-    
+
     if (!config) {
       throw this.createNotFoundError('Database', databaseId);
     }
@@ -121,7 +123,7 @@ export class DatabaseService extends BaseService {
 
     // Find the specific database
     const config = response.data.configs.find((db: any) => db.db_id === databaseId);
-    
+
     if (!config) {
       throw this.createNotFoundError('Database', databaseId);
     }
@@ -153,13 +155,13 @@ export class DatabaseService extends BaseService {
     }
 
     const startTime = Date.now();
-    
+
     try {
       // Try to get database info as a connection test
       await this.getDatabaseById(databaseId);
-      
+
       const responseTime = Date.now() - startTime;
-      
+
       return {
         data: {
           connected: true,
@@ -170,7 +172,7 @@ export class DatabaseService extends BaseService {
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      
+
       return {
         data: {
           connected: false,
@@ -202,13 +204,13 @@ export class DatabaseService extends BaseService {
 
     // Get database info first
     const databaseResponse = await this.getDatabaseById(databaseId);
-    
+
     if (!databaseResponse.success) {
       throw this.createNotFoundError('Database', databaseId);
     }
 
     const tableInfo = databaseResponse.data.metadata?.tableInfo;
-    
+
     // Calculate stats from table info
     const tableCount = tableInfo?.tables?.length || 0;
     const totalRows = tableInfo?.tables?.reduce((sum: number, table: any) => {
@@ -265,6 +267,79 @@ export class DatabaseService extends BaseService {
       isValid: errors.length === 0,
       errors,
     };
+  }
+
+  // ========== DB Query Update Operations ==========
+
+  /**
+   * Trigger combined learn-sync for a database
+   * This allows non-admin users to trigger sync for databases they have access to
+   */
+  async triggerDatabaseLearnSync(
+    dbId: number,
+    options?: {
+      userId?: string;
+      doTableDescriptions?: boolean;
+      doLearn?: boolean;
+      doSubIntentSync?: boolean;
+    }
+  ): Promise<ServiceResponse<{ task_id: string }>> {
+    this.validateRequired({ dbId }, ['dbId']);
+
+    try {
+      // Get user_id from token if not provided
+      let userId = options?.userId;
+      if (!userId) {
+        // Try to extract from token using auth service
+        const token = storage.get('accessToken') ||
+          (typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null);
+        if (token) {
+          userId = authService.getUserIdFromToken(token) || 'user'; // Default to user role/id if generic
+        } else {
+          // If no token, we can't really proceed safely without a user ID, 
+          // but the backend might handle it or reject it. 
+          // Let's rely on the backend validation or passed userId.
+          if (!userId) {
+            console.warn("No userId provided and could not extract from token");
+          }
+        }
+      }
+
+      const requestBody = {
+        user_id: userId,
+        do_table_descriptions: options?.doTableDescriptions ?? true,
+        do_learn: options?.doLearn ?? true,
+        do_sub_intent_sync: options?.doSubIntentSync ?? true,
+      };
+
+      const result = await this.post<{ task_id: string }>(
+        API_ENDPOINTS.DB_QUERY_UPDATE_COMBINED_LEARN_SYNC(dbId),
+        requestBody,
+        {
+          invalidationPatterns: ['databases', 'tasks']
+        }
+      );
+
+      return result;
+    } catch (error: any) {
+      throw this.handleError(error, 'trigger database learn sync');
+    }
+  }
+
+  /**
+   * Get task status for DB query update operations
+   * Uses getFresh to avoid caching and get real-time status
+   */
+  async getDbQueryUpdateTaskStatus(taskId: string): Promise<ServiceResponse<any>> {
+    this.validateRequired({ taskId }, ['taskId']);
+
+    try {
+      return await this.getFresh<any>(
+        API_ENDPOINTS.DB_QUERY_UPDATE_GET_TASK(taskId)
+      );
+    } catch (error: any) {
+      throw this.handleError(error, 'get db query update task status');
+    }
   }
 }
 

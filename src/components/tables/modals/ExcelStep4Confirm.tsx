@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useExcelToDB } from "@/lib/hooks/use-excel-to-db";
 import { toast } from "sonner";
+import { databaseService } from "@/lib/api/services/database-service";
 
 interface ExcelStep4ConfirmProps {
   selectedFile: File | null;
@@ -41,6 +42,12 @@ export function ExcelStep4Confirm({
   const [importProgress, setImportProgress] = useState(0);
   const [importError, setImportError] = useState<string | null>(null);
 
+  // Sync state
+  const [syncTaskId, setSyncTaskId] = useState<string | null>(null);
+  const [syncStatus, setSyncStatus] = useState<'pending' | 'running' | 'success' | 'failed'>('pending');
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+
   const { pushDataToDatabase, uploadProgress } = useExcelToDB();
 
   // Helper function to ensure table name includes schema
@@ -50,6 +57,71 @@ export function ExcelStep4Confirm({
     }
     return tableName;
   }, []);
+
+  // Handle sync polling
+  React.useEffect(() => {
+    if (!syncTaskId || syncStatus === 'success' || syncStatus === 'failed') return;
+
+    const pollInterval = 2000;
+    let pollTimer: NodeJS.Timeout;
+    let isCancelled = false;
+
+    const poll = async () => {
+      if (isCancelled) return;
+
+      try {
+        const response = await databaseService.getDbQueryUpdateTaskStatus(syncTaskId);
+
+        if (isCancelled) return;
+
+        if (response.success && response.data) {
+          const taskData = response.data;
+          const status = taskData.status === 'completed' ? 'success' :
+            taskData.status === 'failed' ? 'failed' :
+              taskData.status === 'running' ? 'running' : 'pending';
+
+          setSyncStatus(status);
+
+          // API uses progress_percentage or other variations
+          const progressValue = taskData.progress_percentage ||
+            taskData.progress ||
+            taskData.percentage ||
+            0;
+          setSyncProgress(typeof progressValue === 'number' ? progressValue : parseFloat(progressValue) || 0);
+
+          setSyncMessage(taskData.message || (status === 'running' ? 'Syncing database...' : status));
+
+          if (status === 'success') {
+            toast.success("Database sync completed successfully");
+            setTimeout(() => {
+              onComplete();
+            }, 1000);
+            return;
+          } else if (status === 'failed') {
+            setImportError(taskData.error || taskData.error_message || "Sync failed");
+            toast.error("Database sync failed");
+            return;
+          }
+
+          if (status === 'pending' || status === 'running') {
+            pollTimer = setTimeout(poll, pollInterval);
+          }
+        }
+      } catch (error: any) {
+        if (isCancelled) return;
+        console.error('Error polling sync progress:', error);
+        // Don't fail immediately on a single poll error, try again
+        pollTimer = setTimeout(poll, pollInterval);
+      }
+    };
+
+    poll();
+
+    return () => {
+      isCancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [syncTaskId, syncStatus, onComplete]);
 
   // Handle data import
   const handleImportData = async () => {
@@ -61,11 +133,14 @@ export function ExcelStep4Confirm({
     setIsImporting(true);
     setImportError(null);
     setImportProgress(0);
+    setSyncStatus('pending');
+    setSyncProgress(0);
+    setSyncMessage(null);
 
     try {
       // Use custom mapping if provided, otherwise extract from mapping_details
       let customMapping: Record<string, string> = {};
-      
+
       if (mappingData.customMapping && Object.keys(mappingData.customMapping).length > 0) {
         // Use the custom mapping from step 3
         customMapping = mappingData.customMapping;
@@ -100,12 +175,25 @@ export function ExcelStep4Confirm({
 
       if (response) {
         setImportProgress(100);
-        toast.success(`Successfully imported ${response.rows_inserted} rows`);
+        toast.success(`Successfully imported ${response.rows_inserted} rows. Starting sync...`);
 
-        // Wait a moment then complete
-        setTimeout(() => {
-          onComplete();
-        }, 1500);
+        // Trigger Sync
+        try {
+          const syncResponse = await databaseService.triggerDatabaseLearnSync(dbId!, { userId });
+          if (syncResponse.success && syncResponse.data?.task_id) {
+            setSyncTaskId(syncResponse.data.task_id);
+            setSyncStatus('running');
+            // Polling handled by useEffect
+          } else {
+            // Sync failed to start, but import was successful
+            toast.warning("Import successful but failed to start sync");
+            setTimeout(() => onComplete(), 1500);
+          }
+        } catch (syncErr) {
+          console.error("Failed to trigger sync:", syncErr);
+          toast.warning("Import successful but failed to start sync");
+          setTimeout(() => onComplete(), 1500);
+        }
       }
     } catch (err) {
       console.error("Error importing data:", err);
@@ -115,9 +203,9 @@ export function ExcelStep4Confirm({
           : "Failed to import data to database";
       setImportError(errorMessage);
       toast.error(errorMessage);
-    } finally {
-      setIsImporting(false);
+      setIsImporting(false); // Only stop importing state on error, otherwise wait for sync
     }
+    // distinct from finally block because we want to stay in "importing" state during sync
   };
 
   // Get table name from full name
@@ -174,6 +262,25 @@ export function ExcelStep4Confirm({
         </div>
       )}
 
+      {/* Sync Progress */}
+      {syncStatus !== 'pending' && (
+        <div className="space-y-3 mt-4 pt-4 border-t border-slate-700/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {syncStatus === 'running' && <Loader2 className="h-4 w-4 animate-spin text-blue-400" />}
+              {syncStatus === 'success' && <CheckCircle className="h-4 w-4 text-emerald-400" />}
+              {syncStatus === 'failed' && <AlertCircle className="h-4 w-4 text-red-400" />}
+              <span className="text-slate-300 font-medium">Database Sync</span>
+            </div>
+            <span className="text-white font-semibold">{Math.round(syncProgress)}%</span>
+          </div>
+          <Progress value={syncProgress} className="w-full h-2 bg-slate-700" />
+          {syncMessage && (
+            <p className="text-xs text-slate-400 text-center">{syncMessage}</p>
+          )}
+        </div>
+      )}
+
       {/* Error Display */}
       {importError && (
         <Alert
@@ -210,11 +317,10 @@ export function ExcelStep4Confirm({
                     </span>
                   </div>
                   <Badge
-                    className={`${
-                      detail.mapping_status === "MAPPED"
+                    className={`${detail.mapping_status === "MAPPED"
                         ? "bg-green-500/20 text-green-400 border-green-500/30"
                         : "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                    }`}
+                      }`}
                   >
                     {detail.mapping_status}
                   </Badge>
@@ -244,7 +350,7 @@ export function ExcelStep4Confirm({
           {isImporting ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              Importing...
+              {syncStatus !== 'pending' ? 'Syncing...' : 'Importing...'}
             </>
           ) : (
             <>Import Data to Database</>
