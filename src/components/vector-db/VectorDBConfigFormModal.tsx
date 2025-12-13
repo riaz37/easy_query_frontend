@@ -46,7 +46,7 @@ export function VectorDBConfigFormModal({
   loadingUsers = false,
 }: VectorDBConfigFormModalProps) {
   const [formData, setFormData] = React.useState<Partial<VectorDBConfigFormData>>({
-    user_id: "",
+    user_id: "admin",
     access_level: 2,
     DB_HOST: "",
     DB_PORT: 5432,
@@ -61,7 +61,7 @@ export function VectorDBConfigFormModal({
   React.useEffect(() => {
     if (open) {
       setFormData({
-        user_id: "",
+        user_id: "admin",
         access_level: 2,
         DB_HOST: "",
         DB_PORT: 5432,
@@ -135,7 +135,8 @@ export function VectorDBConfigFormModal({
             </DialogHeader>
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
               <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
+                {/* User ID selection hardcoded to admin */}
+                {/* <div className="grid gap-2">
                   <Label htmlFor="userId" className="text-white font-public-sans">
                     User ID *
                   </Label>
@@ -155,7 +156,7 @@ export function VectorDBConfigFormModal({
                       </option>
                     ))}
                   </select>
-                </div>
+                </div> */}
                 <div className="grid gap-2">
                   <Label htmlFor="accessLevel" className="text-white font-public-sans">
                     Access Level *

@@ -24,7 +24,7 @@ export default function VectorDBManagementPage() {
   const [configs, setConfigs] = useState<VectorDBConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Create/Edit State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -88,7 +88,7 @@ export default function VectorDBManagementPage() {
       } else {
         // For create mode, use the combined endpoint
         response = await vectorDBService.createUserConfigDirect({
-          user_id: data.user_id,
+          user_id: "admin",
           db_config: {
             DB_HOST: data.DB_HOST,
             DB_PORT: data.DB_PORT,
@@ -129,7 +129,7 @@ export default function VectorDBManagementPage() {
     try {
       setDeleting(true);
       const response = await vectorDBService.deleteVectorDBConfig(configToDelete.db_id);
-      
+
       if (response.success) {
         toast.success("Vector DB config deleted successfully");
         setIsDeleteDialogOpen(false);
@@ -217,8 +217,8 @@ export default function VectorDBManagementPage() {
 
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
-      <PageHeader 
-        title="Vector DB Management" 
+      <PageHeader
+        title="Vector DB Management"
         description="Manage vector database configurations and user access. Organize documents using folders."
         icon={<Cpu className="w-6 h-6 text-emerald-400" />}
         actions={
