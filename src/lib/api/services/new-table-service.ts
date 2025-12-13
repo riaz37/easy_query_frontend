@@ -34,7 +34,7 @@ export class NewTableService extends BaseService {
       table_name: 'string',
       schema: 'string',
     });
-    
+
     if (request.db_id <= 0) {
       throw this.createValidationError('Database ID must be positive');
     }
@@ -42,12 +42,12 @@ export class NewTableService extends BaseService {
     if (request.table_name.trim().length === 0) {
       throw this.createValidationError('Table name cannot be empty');
     }
-    
+
     // Validate schema
     if (!request.schema || request.schema.trim().length === 0) {
       throw this.createValidationError('Schema cannot be empty');
     }
-    
+
     // Validate schema format
     if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(request.schema)) {
       throw this.createValidationError('Schema must start with a letter and contain only letters, numbers, and underscores');
@@ -80,12 +80,12 @@ export class NewTableService extends BaseService {
       API_ENDPOINTS.NEW_TABLE_CREATE,
       request
     );
-    
+
     // Invalidate table-related cache after creating table
     if (result.success) {
       CacheInvalidator.invalidateTables();
     }
-    
+
     return result;
   }
 
@@ -138,12 +138,12 @@ export class NewTableService extends BaseService {
       API_ENDPOINTS.NEW_TABLE_CREATE, // Using create endpoint as fallback since UPDATE endpoint is not available
       request
     );
-    
+
     // Invalidate table-related cache after updating table
     if (result.success) {
       CacheInvalidator.invalidateTables();
     }
-    
+
     return result;
   }
 
@@ -168,12 +168,12 @@ export class NewTableService extends BaseService {
       API_ENDPOINTS.NEW_TABLE_CREATE, // Using create endpoint as fallback since DELETE endpoint is not available
       request
     );
-    
+
     // Invalidate table-related cache after deleting table
     if (result.success) {
       CacheInvalidator.invalidateTables();
     }
-    
+
     return result;
   }
 
@@ -254,7 +254,7 @@ export class NewTableService extends BaseService {
    */
   async getUserTables(userId: string, dbId: number): Promise<ServiceResponse<UserTablesResponse['data']>> {
     this.validateTypes({ userId, dbId }, { userId: 'string', dbId: 'number' });
-    
+
     if (!userId.trim()) {
       throw this.createValidationError('User ID is required');
     }
@@ -273,7 +273,7 @@ export class NewTableService extends BaseService {
    */
   async getTablesByDatabase(databaseId: number): Promise<ServiceResponse<any>> {
     this.validateTypes({ databaseId }, { databaseId: 'number' });
-    
+
     if (databaseId <= 0) {
       throw this.createValidationError('Database ID must be positive');
     }
@@ -296,7 +296,7 @@ export class NewTableService extends BaseService {
    */
   async updateUserBusinessRule(userId: string, dbId: number, businessRule: string): Promise<ServiceResponse<any>> {
     this.validateTypes({ userId, dbId, businessRule }, { userId: 'string', dbId: 'number', businessRule: 'string' });
-    
+
     if (!userId.trim()) {
       throw this.createValidationError('User ID is required');
     }
@@ -304,15 +304,22 @@ export class NewTableService extends BaseService {
     if (dbId <= 0) {
       throw this.createValidationError('Database ID must be positive');
     }
-    
+
     if (businessRule.trim().length === 0) {
       throw this.createValidationError('Business rule cannot be empty');
     }
 
-    return this.put<any>(
+    const result = await this.put<any>(
       API_ENDPOINTS.NEW_TABLE_UPDATE_BUSINESS_RULE(userId),
       { business_rule: businessRule, db_id: dbId }
     );
+
+    // Invalidate table-related cache after updating business rule
+    if (result.success) {
+      CacheInvalidator.invalidateTables();
+    }
+
+    return result;
   }
 
   /**
@@ -353,19 +360,19 @@ export class NewTableService extends BaseService {
     // Generate SQL
     const columnDefinitions = columns.map(column => {
       let definition = `${column.name} ${column.type}`;
-      
+
       if (!column.nullable) {
         definition += ' NOT NULL';
       }
-      
+
       if (column.default !== undefined) {
         definition += ` DEFAULT ${column.default}`;
       }
-      
+
       if (column.primary_key) {
         definition += ' PRIMARY KEY';
       }
-      
+
       return definition;
     });
 

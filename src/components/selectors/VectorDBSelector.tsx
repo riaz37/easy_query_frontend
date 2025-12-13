@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { vectorDBService, VectorDBConfig } from '@/lib/api/services/vector-db-service';
+import { userAccessService } from '@/lib/api/services/user-access-service';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/loading';
 
@@ -26,17 +28,48 @@ export function VectorDBSelector({
 }: VectorDBSelectorProps) {
   const [configs, setConfigs] = useState<VectorDBConfig[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchConfigs();
-  }, []);
+  }, [user]);
 
   const fetchConfigs = async () => {
     try {
       setLoading(true);
+      
+      // Fetch all vector DB configs
       const response = await vectorDBService.getVectorDBConfigs();
-      if (response.success && response.data && Array.isArray(response.data)) {
-        setConfigs(response.data);
+      if (!response.success || !response.data || !Array.isArray(response.data)) {
+        setConfigs([]);
+        return;
+      }
+
+      const allConfigs = response.data;
+
+      // If user is admin, show all configs
+      if (user?.is_admin) {
+        setConfigs(allConfigs);
+        return;
+      }
+
+      // For regular users, filter by accessible config_ids
+      if (user?.user_id) {
+        try {
+          const accessResponse = await userAccessService.getRBACUserAccess(user.user_id);
+          if (accessResponse.success && accessResponse.data?.config_ids) {
+            const accessibleConfigIds = new Set(accessResponse.data.config_ids);
+            const filteredConfigs = allConfigs.filter(config => accessibleConfigIds.has(config.db_id));
+            setConfigs(filteredConfigs);
+          } else {
+            // No access data, show empty list
+            setConfigs([]);
+          }
+        } catch (accessError) {
+          console.error('Failed to fetch user access:', accessError);
+          // On error, fail closed - show no configs
+          setConfigs([]);
+        }
       } else {
         setConfigs([]);
       }

@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { XIcon } from "lucide-react";
 
 export interface VectorDBConfigFormData {
+  user_id: string;
+  access_level: number;
   DB_HOST: string;
   DB_PORT: number;
   DB_NAME: string;
@@ -29,6 +31,8 @@ interface VectorDBConfigFormModalProps {
   initialData?: Partial<VectorDBConfigFormData>;
   onSubmit: (data: VectorDBConfigFormData) => Promise<void>;
   isSubmitting?: boolean;
+  users?: Array<{ user_id: string; username?: string }>;
+  loadingUsers?: boolean;
 }
 
 export function VectorDBConfigFormModal({
@@ -38,8 +42,12 @@ export function VectorDBConfigFormModal({
   initialData,
   onSubmit,
   isSubmitting = false,
+  users = [],
+  loadingUsers = false,
 }: VectorDBConfigFormModalProps) {
   const [formData, setFormData] = React.useState<Partial<VectorDBConfigFormData>>({
+    user_id: "",
+    access_level: 2,
     DB_HOST: "",
     DB_PORT: 5432,
     DB_NAME: "",
@@ -53,6 +61,8 @@ export function VectorDBConfigFormModal({
   React.useEffect(() => {
     if (open) {
       setFormData({
+        user_id: "",
+        access_level: 2,
         DB_HOST: "",
         DB_PORT: 5432,
         DB_NAME: "",
@@ -66,6 +76,7 @@ export function VectorDBConfigFormModal({
 
   const handleSubmit = async () => {
     if (
+      !formData.user_id ||
       !formData.DB_NAME ||
       !formData.DB_HOST ||
       !formData.DB_USER ||
@@ -79,10 +90,15 @@ export function VectorDBConfigFormModal({
       return;
     }
 
+    if (formData.access_level === undefined || formData.access_level < 0) {
+      return;
+    }
+
     await onSubmit(formData as VectorDBConfigFormData);
   };
 
   const isValid =
+    formData.user_id &&
     formData.DB_NAME &&
     formData.DB_HOST &&
     formData.DB_USER &&
@@ -90,7 +106,9 @@ export function VectorDBConfigFormModal({
     formData.schema &&
     formData.DB_PORT &&
     formData.DB_PORT > 0 &&
-    formData.DB_PORT <= 65535;
+    formData.DB_PORT <= 65535 &&
+    formData.access_level !== undefined &&
+    formData.access_level >= 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,6 +135,46 @@ export function VectorDBConfigFormModal({
             </DialogHeader>
             <div className="flex-1 px-4 sm:px-6 lg:px-8 pb-4 sm:pb-6 overflow-y-auto">
               <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="userId" className="text-white font-public-sans">
+                    User ID *
+                  </Label>
+                  <select
+                    id="userId"
+                    value={formData.user_id || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, user_id: e.target.value })
+                    }
+                    className="bg-white/5 border border-white/10 text-white rounded-md px-3 py-2 font-public-sans"
+                    disabled={loadingUsers || isEditMode}
+                  >
+                    <option value="">Select User</option>
+                    {users.map((user) => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {user.username || user.user_id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="accessLevel" className="text-white font-public-sans">
+                    Access Level *
+                  </Label>
+                  <Input
+                    id="accessLevel"
+                    type="number"
+                    value={formData.access_level ?? 2}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        access_level: parseInt(e.target.value) || 0,
+                      })
+                    }
+                    className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 font-public-sans"
+                    placeholder="2"
+                    min="0"
+                  />
+                </div>
                 <div className="grid gap-2">
                   <Label htmlFor="dbName" className="text-white font-public-sans">
                     Database Name *

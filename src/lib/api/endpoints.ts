@@ -122,6 +122,7 @@ export const API_ENDPOINTS = {
   FMS_DB_CONFIG_SETUP: `${baseUrl}/fms-db-config/setup`,
   FMS_DB_CONFIG_SETUP_FORCE: `${baseUrl}/fms-db-config/setup/force`,
   FMS_DB_CONFIG_HEALTH: `${baseUrl}/fms-db-config/health`,
+  FMS_DB_CONFIG_USER_CONFIG_DIRECT: `${baseUrl}/fms-db-config/user-config-direct`,
 
   // DB Query Update endpoints
   DB_QUERY_UPDATE_COMBINED_LEARN_SYNC: (dbId: number) => `${baseUrl}/db-query-update/combined/learn-sync/${dbId}`,

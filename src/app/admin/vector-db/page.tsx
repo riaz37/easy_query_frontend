@@ -4,21 +4,18 @@ import React, { useEffect, useState } from "react";
 import { PageLayout, PageHeader } from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cpu, Plus, UserPlus } from "lucide-react";
-import { vectorDBService, VectorDBConfig, UserConfig } from "@/lib/api/services/vector-db-service";
+import { Cpu, Plus } from "lucide-react";
+import { vectorDBService, VectorDBConfig } from "@/lib/api/services/vector-db-service";
 import { adminService } from "@/lib/api/services/admin-service";
 import { useRouter } from "next/navigation";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { toast } from "sonner";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
-  CreateUserConfigModal,
   VectorDBConfigFormModal,
   VectorDBConfigFormData,
-  VectorDBTabs,
   SearchBar,
   VectorDBConfigsTable,
-  UserConfigurationsTable,
 } from "@/components/vector-db";
 
 export default function VectorDBManagementPage() {
@@ -43,15 +40,7 @@ export default function VectorDBManagementPage() {
   const [users, setUsers] = useState<Array<{ user_id: string; username?: string }>>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-  // Create User Config State (in User Configurations tab)
-  const [isCreateUserConfigDialogOpen, setIsCreateUserConfigDialogOpen] = useState(false);
-  const [creatingUserConfig, setCreatingUserConfig] = useState(false);
 
-  // User Configurations State
-  const [activeTab, setActiveTab] = useState<"configs" | "user-configs">("configs");
-  const [userConfigs, setUserConfigs] = useState<UserConfig[]>([]);
-  const [loadingUserConfigs, setLoadingUserConfigs] = useState(false);
-  const [userConfigSearchQuery, setUserConfigSearchQuery] = useState("");
 
   useEffect(() => {
     if (isInitialized && !tokens?.isAdmin) {
@@ -62,17 +51,11 @@ export default function VectorDBManagementPage() {
 
     if (isInitialized && tokens?.isAdmin) {
       fetchConfigs();
-      if (activeTab === "user-configs") {
-        fetchUserConfigs();
-      }
+      fetchUsers(); // Fetch users on mount for the form
     }
   }, [isInitialized, tokens, router]);
 
-  useEffect(() => {
-    if (activeTab === "user-configs" && isInitialized && tokens?.isAdmin) {
-      fetchUserConfigs();
-    }
-  }, [activeTab, isInitialized, tokens]);
+
 
   const fetchConfigs = async () => {
     try {
@@ -99,16 +82,32 @@ export default function VectorDBManagementPage() {
 
       let response;
       if (isEditMode && selectedConfig) {
-        response = await vectorDBService.updateVectorDBConfig(selectedConfig.db_id, data);
+        // For edit mode, only update DB config (not user config)
+        const { user_id, access_level, ...dbConfig } = data;
+        response = await vectorDBService.updateVectorDBConfig(selectedConfig.db_id, dbConfig);
       } else {
-        response = await vectorDBService.createVectorDBConfig(data);
+        // For create mode, use the combined endpoint
+        response = await vectorDBService.createUserConfigDirect({
+          user_id: data.user_id,
+          db_config: {
+            DB_HOST: data.DB_HOST,
+            DB_PORT: data.DB_PORT,
+            DB_NAME: data.DB_NAME,
+            DB_USER: data.DB_USER,
+            DB_PASSWORD: data.DB_PASSWORD,
+            schema: data.schema,
+          },
+          access_level: data.access_level,
+          accessible_tables: [],
+          table_names: [],
+        });
       }
 
       if (response.success) {
         toast.success(
           isEditMode
             ? "Vector DB config updated successfully"
-            : "Vector DB config created successfully"
+            : "Vector DB and user configuration created successfully"
         );
         setIsDialogOpen(false);
         resetForm();
@@ -170,6 +169,8 @@ export default function VectorDBManagementPage() {
   const getFormInitialData = (): Partial<VectorDBConfigFormData> | undefined => {
     if (isEditMode && selectedConfig) {
       return {
+        user_id: "", // Not editable in edit mode
+        access_level: 2, // Not editable in edit mode
         DB_HOST: selectedConfig.db_config?.DB_HOST || "",
         DB_PORT: selectedConfig.db_config?.DB_PORT || 5432,
         DB_NAME: selectedConfig.db_config?.DB_NAME || "",
@@ -181,13 +182,7 @@ export default function VectorDBManagementPage() {
     return undefined;
   };
 
-  const openCreateUserConfigDialog = async () => {
-    setIsCreateUserConfigDialogOpen(true);
-    // Fetch users if not already loaded
-    if (users.length === 0) {
-      await fetchUsers();
-    }
-  };
+
 
   const fetchUsers = async () => {
     try {
@@ -207,54 +202,10 @@ export default function VectorDBManagementPage() {
   };
 
 
-  const fetchUserConfigs = async () => {
-    try {
-      setLoadingUserConfigs(true);
-      const response = await vectorDBService.getAllUserConfigs();
-      if (response.success && response.data) {
-        setUserConfigs(response.data.configs || []);
-      } else {
-        setUserConfigs([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch user configs:", error);
-      toast.error("Failed to load user configurations");
-    } finally {
-      setLoadingUserConfigs(false);
-    }
-  };
 
 
-  const handleCreateUserConfig = async (data: {
-    user_id: string;
-    db_id: number;
-    access_level: number;
-    table_names: string[];
-  }) => {
-    try {
-      setCreatingUserConfig(true);
-      const response = await vectorDBService.createUserConfig({
-        user_id: data.user_id,
-        db_id: data.db_id,
-        access_level: data.access_level,
-        accessible_tables: [],
-        table_names: data.table_names,
-      });
 
-      if (response.success) {
-        toast.success("User configuration created successfully");
-        setIsCreateUserConfigDialogOpen(false);
-        // Refresh user configs immediately
-        await fetchUserConfigs();
-      } else {
-        toast.error(response.error || "Failed to create user configuration");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create user configuration");
-    } finally {
-      setCreatingUserConfig(false);
-    }
-  };
+
 
   const filteredConfigs = configs.filter(
     (config) =>
@@ -262,13 +213,7 @@ export default function VectorDBManagementPage() {
       config.db_id.toString().includes(searchQuery)
   );
 
-  const filteredUserConfigs = userConfigs.filter(
-    (config) =>
-      config.user_id?.toLowerCase().includes(userConfigSearchQuery.toLowerCase()) ||
-      config.db_config?.DB_NAME?.toLowerCase().includes(userConfigSearchQuery.toLowerCase()) ||
-      config.config_id.toString().includes(userConfigSearchQuery) ||
-      config.db_id.toString().includes(userConfigSearchQuery)
-  );
+
 
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
@@ -277,58 +222,31 @@ export default function VectorDBManagementPage() {
         description="Manage vector database configurations and user access. Organize documents using folders."
         icon={<Cpu className="w-6 h-6 text-emerald-400" />}
         actions={
-          activeTab === "configs" ? (
-            <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Vector DB
-            </Button>
-          ) : (
-            <Button onClick={openCreateUserConfigDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
-              <UserPlus className="w-4 h-4 mr-2" />
-              Create User Config
-            </Button>
-          )
+          <Button onClick={openCreateDialog} className="bg-emerald-600 hover:bg-emerald-700 text-white font-barlow">
+            <Plus className="w-4 h-4 mr-2" />
+            Add Vector DB
+          </Button>
         }
       />
 
-      <VectorDBTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <Card className="p-6 border border-white/10 bg-white/5 backdrop-blur-sm">
+        <SearchBar
+          placeholder="Search configs..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+          onRefresh={fetchConfigs}
+        />
 
-      {activeTab === "configs" && (
-        <Card className="p-6 border border-white/10 bg-white/5 backdrop-blur-sm">
-          <SearchBar
-            placeholder="Search configs..."
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onRefresh={fetchConfigs}
-          />
-
-          <VectorDBConfigsTable
-            configs={filteredConfigs}
-            loading={loading}
-            onEdit={openEditDialog}
-            onDelete={(config) => {
-              setConfigToDelete(config);
-              setIsDeleteDialogOpen(true);
-            }}
-          />
-        </Card>
-      )}
-
-      {activeTab === "user-configs" && (
-        <Card className="p-6 border border-white/10 bg-white/5 backdrop-blur-sm">
-          <SearchBar
-            placeholder="Search user configs..."
-            value={userConfigSearchQuery}
-            onChange={setUserConfigSearchQuery}
-            onRefresh={fetchUserConfigs}
-          />
-
-          <UserConfigurationsTable
-            configs={filteredUserConfigs}
-            loading={loadingUserConfigs}
-          />
-        </Card>
-      )}
+        <VectorDBConfigsTable
+          configs={filteredConfigs}
+          loading={loading}
+          onEdit={openEditDialog}
+          onDelete={(config) => {
+            setConfigToDelete(config);
+            setIsDeleteDialogOpen(true);
+          }}
+        />
+      </Card>
 
       {/* Create/Edit Dialog */}
       <VectorDBConfigFormModal
@@ -338,6 +256,8 @@ export default function VectorDBManagementPage() {
         initialData={getFormInitialData()}
         onSubmit={handleSubmit}
         isSubmitting={submitting}
+        users={users}
+        loadingUsers={loadingUsers}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -353,16 +273,7 @@ export default function VectorDBManagementPage() {
         isLoading={deleting}
       />
 
-      {/* Create User Config Dialog */}
-      <CreateUserConfigModal
-        open={isCreateUserConfigDialogOpen}
-        onOpenChange={setIsCreateUserConfigDialogOpen}
-        users={users}
-        configs={configs}
-        loadingUsers={loadingUsers}
-        onSubmit={handleCreateUserConfig}
-        isSubmitting={creatingUserConfig}
-      />
+
     </PageLayout>
   );
 }

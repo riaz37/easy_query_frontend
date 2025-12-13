@@ -280,7 +280,7 @@ export class ApiClient {
 
     // Generate request key for deduplication and caching
     const requestKey = this.generateRequestKey(endpoint, processedConfig);
-    
+
     // Check cache first for GET requests
     if (processedConfig.method === 'GET' && !processedConfig.skipCache) {
       const cachedData = apiCache.get(requestKey);
@@ -289,7 +289,7 @@ export class ApiClient {
         return cachedData;
       }
     }
-    
+
     // Check if the same request is already pending
     if (this.pendingRequests.has(requestKey)) {
       console.log(`Deduplicating request: ${requestKey}`);
@@ -298,10 +298,10 @@ export class ApiClient {
 
     // Create the request promise
     const requestPromise = this.executeRequest<T>(endpoint, processedConfig);
-    
+
     // Store the promise for deduplication
     this.pendingRequests.set(requestKey, requestPromise);
-    
+
     // Clean up the pending request when it completes
     requestPromise.finally(() => {
       this.pendingRequests.delete(requestKey);
@@ -320,15 +320,14 @@ export class ApiClient {
     // Build URL
     const url = endpoint.startsWith("http")
       ? endpoint
-      : `${this.baseUrl}${
-          endpoint.startsWith("/") ? endpoint : `/${endpoint}`
-        }`;
+      : `${this.baseUrl}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`
+      }`;
 
     // Build query params
     const queryParams = processedConfig.params
       ? `?${new URLSearchParams(
-          processedConfig.params as Record<string, string>
-        ).toString()}`
+        processedConfig.params as Record<string, string>
+      ).toString()}`
       : "";
 
     // Build request options
@@ -389,14 +388,14 @@ export class ApiClient {
 
       // Process response through interceptors
       const result = this.processResponse(data);
-      
+
       // Cache successful GET requests
       if (processedConfig.method === 'GET' && !processedConfig.skipCache) {
         const cacheKey = this.generateRequestKey(endpoint, processedConfig);
         apiCache.set(cacheKey, result, processedConfig.cacheTTL, processedConfig.invalidationPatterns);
         console.log(`Cached response: ${cacheKey}`, processedConfig.invalidationPatterns ? `with patterns: ${processedConfig.invalidationPatterns.join(', ')}` : '');
       }
-      
+
       return result;
     } catch (error) {
       // Create API error
@@ -508,14 +507,14 @@ apiClient.addRequestInterceptor((config: ApiRequestConfig) => {
           ...config.headers,
           'Authorization': `Bearer ${tokens.accessToken}`,
         };
-        
+
         logger.api('Added auth header for request to:', config.url || 'unknown endpoint');
       }
     }
   } catch (error) {
     console.warn('Failed to add auth header:', error);
   }
-  
+
   return config;
 });
 
@@ -523,14 +522,14 @@ apiClient.addRequestInterceptor((config: ApiRequestConfig) => {
 apiClient.addResponseInterceptor((response: any) => {
   // Debug logging to understand response structure
   logger.api('Raw response:', response);
-  
+
   // If the response has the expected API structure {status, message, data}
   // return just the data portion for consistency
   if (response && typeof response === 'object' && response.data !== undefined) {
     logger.api('Extracting data portion:', response.data);
     return response.data;
   }
-  
+
   // Otherwise return the response as-is
   logger.api('Returning response as-is:', response);
   return response;

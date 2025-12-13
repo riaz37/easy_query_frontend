@@ -29,7 +29,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Trash2, Save, Database, XIcon } from "lucide-react";
-import { TableColumn } from "@/types/api";
+
+// Define local interface to match API payload structure
+interface TableColumn {
+  name: string;
+  data_type: string;
+  nullable: boolean;
+  is_primary: boolean;
+  is_identity: boolean;
+}
 
 interface CreateTableModalProps {
   open: boolean;

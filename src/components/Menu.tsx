@@ -17,21 +17,25 @@ export default function Menu() {
       path: "/",
       iconComponent: LayoutDashboard,
     },
-    {
-      name: "Database Query",
-      path: "/database-query",
-      iconComponent: Database,
-    },
-    {
-      name: "File Query",
-      path: "/file-query",
-      iconComponent: FileText,
-    },
-    {
-      name: "Tables",
-      path: "/tables",
-      iconComponent: Table2,
-    },
+    ...(!tokens?.isAdmin
+      ? [
+          {
+            name: "Database Query",
+            path: "/database-query",
+            iconComponent: Database,
+          },
+          {
+            name: "File Query",
+            path: "/file-query",
+            iconComponent: FileText,
+          },
+          {
+            name: "Table Management",
+            path: "/table-management",
+            iconComponent: Table2,
+          },
+        ]
+      : []),
     ...(tokens?.isAdmin
       ? [
           {

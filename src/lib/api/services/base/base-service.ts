@@ -3,7 +3,7 @@ import { transformResponse, transformErrorResponse } from "../../transformers";
 import { ApiResponse, ApiRequestConfig } from "@/types/api";
 // Dynamic import to avoid SSR/client-side module resolution issues
 type NetworkErrorType = {
-  new (message: string, statusCode?: number, context?: Record<string, any>): Error & {
+  new(message: string, statusCode?: number, context?: Record<string, any>): Error & {
     statusCode?: number;
     context?: Record<string, any>;
   };
@@ -49,12 +49,12 @@ export abstract class BaseService {
     config?: Partial<ApiRequestConfig>
   ): Promise<ServiceResponse<T>> {
     const startTime = Date.now();
-    
+
     try {
       this.logRequest(method, endpoint, data);
 
       let response: any;
-      
+
       switch (method) {
         case 'GET':
           response = await apiClient.get(endpoint, data, config);
@@ -80,15 +80,15 @@ export abstract class BaseService {
       }
 
       const serviceResponse = this.transformSuccessResponse(response);
-      
+
       this.logResponse(method, endpoint, serviceResponse, Date.now() - startTime);
-      
+
       return serviceResponse;
     } catch (error) {
       const serviceError = this.handleError(error, method, endpoint);
-      
+
       this.logError(method, endpoint, serviceError, Date.now() - startTime);
-      
+
       throw serviceError;
     }
   }
@@ -188,6 +188,7 @@ export abstract class BaseService {
           endpoint,
           service: this.serviceName,
           originalError: error.message,
+          details: error.details,
         }
       );
     }
@@ -227,7 +228,7 @@ export abstract class BaseService {
     if (error.response?.data?.message) return error.response.data.message;
     if (error.response?.statusText) return error.response.statusText;
     if (error.statusCode) return `HTTP ${error.statusCode} error`;
-    
+
     return 'An error occurred';
   }
 
@@ -238,7 +239,7 @@ export abstract class BaseService {
     params: Record<string, any>,
     requiredFields: string[]
   ): void {
-    const missing = requiredFields.filter(field => 
+    const missing = requiredFields.filter(field =>
       params[field] === undefined || params[field] === null
     );
 
@@ -340,10 +341,10 @@ export abstract class BaseService {
    * Create a standardized error for not found resources
    */
   protected createNotFoundError(resource: string, identifier?: string | number): ServiceError {
-    const message = identifier 
+    const message = identifier
       ? `${resource} with identifier '${identifier}' not found`
       : `${resource} not found`;
-    
+
     return new ServiceError(message, 404, {
       type: 'not_found',
       resource,

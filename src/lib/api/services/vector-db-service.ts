@@ -59,10 +59,10 @@ export class VectorDBService extends BaseService {
   async getVectorDBConfigs(): Promise<ServiceResponse<VectorDBConfig[]>> {
     // Use FMS_DB_CONFIG for vector DB configs
     const response = await this.get<any>(API_ENDPOINTS.FMS_DB_CONFIG_GET_ALL);
-    
+
     // Extract the configs array from the nested response structure
     const configs = response.data?.configs || [];
-    
+
     return {
       data: configs,
       success: true,
@@ -82,7 +82,7 @@ export class VectorDBService extends BaseService {
     schema: string;
   }): Promise<ServiceResponse<any>> {
     this.validateRequired(config, ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'schema']);
-    
+
     if (config.DB_PORT <= 0 || config.DB_PORT > 65535) {
       throw this.createValidationError('DB_PORT must be a valid port number (1-65535)');
     }
@@ -93,11 +93,11 @@ export class VectorDBService extends BaseService {
         db_config: config,
       }
     );
-    
+
     if (result.success) {
       CacheInvalidator.invalidateDatabases();
     }
-    
+
     return result;
   }
 
@@ -127,11 +127,11 @@ export class VectorDBService extends BaseService {
         db_config: config,
       }
     );
-    
+
     if (result.success) {
       CacheInvalidator.invalidateDatabases();
     }
-    
+
     return result;
   }
 
@@ -142,11 +142,11 @@ export class VectorDBService extends BaseService {
     this.validateRequired({ dbId }, ['dbId']);
 
     const result = await this.delete<void>(API_ENDPOINTS.FMS_DB_CONFIG_DELETE(dbId));
-    
+
     if (result.success) {
       CacheInvalidator.invalidateDatabases();
     }
-    
+
     return result;
   }
 
@@ -158,19 +158,19 @@ export class VectorDBService extends BaseService {
     if (!configId || configId <= 0) {
       throw this.createValidationError('configId is required and must be positive');
     }
-    
+
     const endpoint = API_ENDPOINTS.FMS_DB_CONFIG_GET_TABLE_NAMES(configId);
     const response = await this.get<any>(endpoint);
-    
+
     // Handle API response structure: { status: "success", message: "...", data: [...] }
     let tableNames: string[] = [];
-    
+
     // Check if response.data is the API response object with nested data
     if (response.data && typeof response.data === 'object') {
       // If response.data has a data property (nested structure)
       if (Array.isArray(response.data.data)) {
         tableNames = response.data.data;
-      } 
+      }
       // If response.data is directly an array
       else if (Array.isArray(response.data)) {
         tableNames = response.data;
@@ -180,7 +180,7 @@ export class VectorDBService extends BaseService {
         tableNames = response.data.table_names;
       }
     }
-    
+
     return {
       data: tableNames,
       success: true,
@@ -212,20 +212,20 @@ export class VectorDBService extends BaseService {
     }
 
     const requestBody = {
-        access_type: "vector_db",
-        vector_db_id: request.vector_db_id,
-        accessible_tables: request.accessible_tables,
-        access_level: request.access_level,
+      access_type: "vector_db",
+      vector_db_id: request.vector_db_id,
+      accessible_tables: request.accessible_tables,
+      access_level: request.access_level,
     };
 
     // Use FMS_DB_CONFIG for vector DB user configs
     const result = await this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_SET_USER_CONFIG, requestBody);
-    
+
     // Invalidate user-related cache after creating vector DB access
     if (result.success) {
       CacheInvalidator.invalidateUsers();
     }
-    
+
     return result;
   }
 
@@ -236,11 +236,11 @@ export class VectorDBService extends BaseService {
    */
   async getAllUserConfigs(): Promise<ServiceResponse<UserConfigsResponse>> {
     const response = await this.get<any>(API_ENDPOINTS.FMS_DB_CONFIG_GET_ALL_USER_CONFIGS);
-    
+
     // Handle API response structure: { status: "success", message: "...", data: { configs: [...], count: ... } }
     let configs: UserConfig[] = [];
     let count = 0;
-    
+
     if (response.data && typeof response.data === 'object') {
       // Check if response.data is the API response object with nested data
       if (response.data.status === 'success' && response.data.data) {
@@ -259,7 +259,7 @@ export class VectorDBService extends BaseService {
         count = configs.length;
       }
     }
-    
+
     return {
       data: {
         configs,
@@ -305,12 +305,65 @@ export class VectorDBService extends BaseService {
     };
 
     const result = await this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_SET_USER_CONFIG, requestBody);
-    
+
     // Invalidate user-related cache after creating user config
     if (result.success) {
       CacheInvalidator.invalidateUsers();
     }
-    
+
+    return result;
+  }
+
+  /**
+   * Create user configuration directly (combined endpoint)
+   * Creates both vector DB config and user config in a single call
+   * Admin can create vector DB configurations and assign to users simultaneously
+   */
+  async createUserConfigDirect(request: {
+    user_id: string;
+    db_config: {
+      DB_HOST: string;
+      DB_PORT: number;
+      DB_NAME: string;
+      DB_USER: string;
+      DB_PASSWORD: string;
+      schema: string;
+    };
+    access_level: number;
+    accessible_tables?: string[];
+    table_names?: string[];
+  }): Promise<ServiceResponse<any>> {
+    this.validateRequired(request, ['user_id', 'db_config', 'access_level']);
+    this.validateRequired(request.db_config, ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD', 'schema']);
+    this.validateTypes(request, {
+      user_id: 'string',
+      access_level: 'number',
+    });
+
+    if (request.db_config.DB_PORT <= 0 || request.db_config.DB_PORT > 65535) {
+      throw this.createValidationError('DB_PORT must be a valid port number (1-65535)');
+    }
+
+    if (request.access_level < 0) {
+      throw this.createValidationError('access_level must be non-negative');
+    }
+
+    const requestBody = {
+      user_id: request.user_id,
+      db_config: request.db_config,
+      access_level: request.access_level,
+      accessible_tables: request.accessible_tables || [],
+      table_names: request.table_names || [],
+    };
+
+    const result = await this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_USER_CONFIG_DIRECT, requestBody);
+
+    // Invalidate both database and user cache after creating combined config
+    if (result.success) {
+      CacheInvalidator.invalidateDatabases();
+      CacheInvalidator.invalidateUsers();
+    }
+
     return result;
   }
 
@@ -368,8 +421,8 @@ export class VectorDBService extends BaseService {
     }
 
     return this.post<any>(API_ENDPOINTS.FMS_DB_CONFIG_APPEND_TABLE_NAME(configId), {
-        table_name: tableName,
-      });
+      table_name: tableName,
+    });
   }
 
   /**
@@ -389,12 +442,12 @@ export class VectorDBService extends BaseService {
     }
 
     const result = await this.delete<any>(API_ENDPOINTS.FMS_DB_CONFIG_DELETE_TABLE_NAME(configId, tableName));
-    
+
     // Invalidate user-related cache after deleting table name
     if (result.success) {
       CacheInvalidator.invalidateUsers();
     }
-    
+
     return result;
   }
 
@@ -458,9 +511,9 @@ export class VectorDBService extends BaseService {
     if (!configId || configId <= 0) {
       throw this.createValidationError('configId is required and must be positive');
     }
-    
+
     const response = await this.getUserTableNames(configId);
-    
+
     return {
       data: {
         tableNames: response.data,

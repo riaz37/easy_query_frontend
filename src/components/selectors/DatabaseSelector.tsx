@@ -10,6 +10,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { adminService } from '@/lib/api/services/admin-service';
+import { userAccessService } from '@/lib/api/services/user-access-service';
+import { useAuth } from '@/lib/hooks/use-auth';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/loading';
 
@@ -33,17 +35,48 @@ export function DatabaseSelector({
 }: DatabaseSelectorProps) {
   const [databases, setDatabases] = useState<MSSQLDatabase[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchDatabases();
-  }, []);
+  }, [user]);
 
   const fetchDatabases = async () => {
     try {
       setLoading(true);
+      
+      // Fetch all databases
       const response = await adminService.getAllDatabases();
-      if (response.success && response.data?.configs && Array.isArray(response.data.configs)) {
-        setDatabases(response.data.configs);
+      if (!response.success || !response.data?.configs || !Array.isArray(response.data.configs)) {
+        setDatabases([]);
+        return;
+      }
+
+      const allDatabases = response.data.configs;
+
+      // If user is admin, show all databases
+      if (user?.is_admin) {
+        setDatabases(allDatabases);
+        return;
+      }
+
+      // For regular users, filter by accessible db_ids
+      if (user?.user_id) {
+        try {
+          const accessResponse = await userAccessService.getRBACUserAccess(user.user_id);
+          if (accessResponse.success && accessResponse.data?.db_ids) {
+            const accessibleDbIds = new Set(accessResponse.data.db_ids);
+            const filteredDatabases = allDatabases.filter(db => accessibleDbIds.has(db.db_id));
+            setDatabases(filteredDatabases);
+          } else {
+            // No access data, show empty list
+            setDatabases([]);
+          }
+        } catch (accessError) {
+          console.error('Failed to fetch user access:', accessError);
+          // On error, fail closed - show no databases
+          setDatabases([]);
+        }
       } else {
         setDatabases([]);
       }
