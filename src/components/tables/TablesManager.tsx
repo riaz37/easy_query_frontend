@@ -106,11 +106,11 @@ export function TablesManager() {
   const [schema, setSchema] = useState("dbo");
   const [columns, setColumns] = useState([
     {
-      name:"id",
-      data_type: "INT",
-      nullable: false,
-      is_primary: true,
-      is_identity: true,
+      name: "",
+      data_type: "VARCHAR(50)",
+      nullable: true,
+      is_primary: false,
+      is_identity: false,
     },
   ]);
   const [businessRule, setBusinessRule] = useState("");
@@ -404,11 +404,11 @@ export function TablesManager() {
             setTableName("");
             setSchema("dbo");
             setColumns([{
-              name: "id",
-              data_type: "INT",
-              nullable: false,
-              is_primary: true,
-              is_identity: true,
+              name: "",
+              data_type: "VARCHAR(50)",
+              nullable: true,
+              is_primary: false,
+              is_identity: false,
             }]);
             // Refresh tables list if YourTablesModal is open
             if (showYourTablesModal) {

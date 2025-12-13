@@ -103,13 +103,8 @@ export function ExcelStep3Mapping({
         const initialMapping: Record<string, string> = {};
         response.mapping_details.forEach((detail) => {
           if (detail.is_mapped && detail.excel_column && detail.table_column) {
-            // Check if this is an identity column
-            const isIdentityColumn =
-              detail.is_identity ||
-              detail.table_column.toLowerCase().includes("id");
-
-            // Only add to mapping if it's not an identity column
-            if (!isIdentityColumn) {
+            // Only add to mapping if it's not an identity column (use is_identity from API)
+            if (!detail.is_identity) {
               initialMapping[detail.excel_column] = detail.table_column;
             }
           }
@@ -257,10 +252,11 @@ export function ExcelStep3Mapping({
                     </SelectTrigger>
                     <SelectContent className="modal-select-content-enhanced">
                       {aiMappingData.all_table_columns.map((col) => {
-                        // Check if this is an identity column (first column or has 'id' in name)
-                        const isIdentityColumn =
-                          col === aiMappingData.all_table_columns[0] ||
-                          col.toLowerCase().includes("id");
+                        // Check if this is an identity column from mapping_details
+                        const mappingDetailForCol = aiMappingData.mapping_details.find(
+                          (detail) => detail.table_column === col
+                        );
+                        const isIdentityColumn = mappingDetailForCol?.is_identity || false;
 
                         return (
                           <SelectItem
