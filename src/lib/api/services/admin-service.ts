@@ -2,7 +2,9 @@ import { API_ENDPOINTS } from "../endpoints";
 import { BaseService, ServiceResponse } from "./base";
 import { CacheInvalidator } from "../cache/cache-invalidator";
 import { authService } from "./auth-service";
+
 import { vectorDBService } from "./vector-db-service";
+import { storage } from "@/lib/utils/storage";
 
 /**
  * Service for admin operations - user management, database management, and access control
@@ -54,11 +56,11 @@ export class AdminService extends BaseService {
           role: role,
         }
       );
-      
+
       if (result.success) {
         CacheInvalidator.invalidateUsers();
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'create user');
@@ -97,11 +99,11 @@ export class AdminService extends BaseService {
           role: role,
         }
       );
-      
+
       if (result.success) {
         CacheInvalidator.invalidateUsers();
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'set user role');
@@ -193,16 +195,16 @@ export class AdminService extends BaseService {
           }
         }
       );
-      
+
       // Note: This returns a task_id, the actual config creation happens in background
-      
+
       if (result.success) {
         CacheInvalidator.invalidateDatabases();
-        
+
         // If the response contains db_id, trigger learn-sync
         // The response structure may vary, so we check for db_id in different possible locations
         const dbId = result.data?.db_id || result.data?.data?.db_id || result.data?.id;
-        
+
         if (dbId && typeof dbId === 'number') {
           // Trigger learn-sync in the background (don't wait for it)
           // This initializes the database learning process
@@ -212,7 +214,7 @@ export class AdminService extends BaseService {
           });
         }
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'create database');
@@ -250,11 +252,11 @@ export class AdminService extends BaseService {
           }
         }
       );
-      
+
       if (result.success) {
         CacheInvalidator.invalidateDatabases();
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'update database');
@@ -269,11 +271,11 @@ export class AdminService extends BaseService {
 
     try {
       const result = await this.delete<void>(API_ENDPOINTS.MSSQL_CONFIG_DELETE(dbId));
-      
+
       if (result.success) {
         CacheInvalidator.invalidateDatabases();
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'delete database');
@@ -343,12 +345,12 @@ export class AdminService extends BaseService {
           config_id: hasConfigIds ? configIds : null,
         }
       );
-      
+
       if (result.success) {
         CacheInvalidator.invalidateUsers();
         CacheInvalidator.invalidateUserAccess();
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'grant access');
@@ -406,12 +408,12 @@ export class AdminService extends BaseService {
           config_id: normalizedConfigIds,
         }
       );
-      
+
       if (result.success) {
         CacheInvalidator.invalidateUsers();
         CacheInvalidator.invalidateUserAccess();
       }
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'revoke access');
@@ -538,7 +540,7 @@ export class AdminService extends BaseService {
       ]);
 
       const totalUsers = usersResponse.data?.length || 0;
-      
+
       // Extract database count from configs array (API returns data in response.data.configs)
       let totalDatabases = 0;
       if (databasesResponse.success) {
@@ -649,7 +651,8 @@ export class AdminService extends BaseService {
       let userId = options?.userId;
       if (!userId) {
         // Try to extract from token using auth service
-        const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+        const token = storage.get('accessToken') ||
+          (typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null);
         if (token) {
           userId = authService.getUserIdFromToken(token) || 'admin';
         } else {
@@ -671,7 +674,7 @@ export class AdminService extends BaseService {
           invalidationPatterns: ['databases', 'tasks']
         }
       );
-      
+
       return result;
     } catch (error: any) {
       throw this.handleError(error, 'trigger database learn sync');

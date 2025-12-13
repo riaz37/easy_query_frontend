@@ -3,7 +3,7 @@
 import React, { createContext, useContext, ReactNode, useState, useCallback, useMemo, useEffect } from 'react';
 import { useAuthContext } from './AuthContextProvider';
 import { ServiceRegistry } from '@/lib/api';
-import { STORAGE_KEYS, saveToUserStorage, loadFromUserStorage, clearEasyQueryStorage } from '@/lib/utils/storage';
+import { STORAGE_KEYS, saveToUserStorage, loadFromUserStorage, clearEasyQueryStorage, storage } from '@/lib/utils/storage';
 
 // Types for file config context
 export interface FileConfig {
@@ -19,15 +19,15 @@ export interface FileConfigContextData {
   currentConfig: FileConfig | null;
   currentConfigId: number | null;
   currentConfigName: string;
-  
+
   // Available configs
   availableConfigs: FileConfig[];
   userConfigs: FileConfig[];
-  
+
   // Loading and error states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setCurrentConfig: (configId: number, configName?: string) => void;
   loadConfigsFromAccess: (configIds: number[]) => void;
@@ -35,7 +35,7 @@ export interface FileConfigContextData {
   refreshConfigs: () => Promise<void>;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  
+
   // Computed values
   hasCurrentConfig: boolean;
   configCount: number;
@@ -73,8 +73,8 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
   // Memoized computed values
   const hasCurrentConfig = useMemo(() => !!currentConfigId, [currentConfigId]);
   const configCount = useMemo(() => availableConfigs.length, [availableConfigs]);
-  const activeConfigCount = useMemo(() => 
-    availableConfigs.filter(config => config.is_active).length, 
+  const activeConfigCount = useMemo(() =>
+    availableConfigs.filter(config => config.is_active).length,
     [availableConfigs]
   );
 
@@ -124,13 +124,13 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
       const response = await ServiceRegistry.userAccess.getUserDBAccess(user.user_id, {
         config_id: true
       });
-      
+
       if (response.success && response.data) {
         const configIds = response.data.config_ids || [];
-        
+
         // If we have config_configs from the API with full details, use those
         let configsToSave: FileConfig[] = [];
-        
+
         if (response.data.config_configs && response.data.config_configs.length > 0) {
           // Use config_configs if available
           configsToSave = response.data.config_configs.map((config: any) => ({
@@ -167,14 +167,14 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
               updated_at: new Date().toISOString(),
             };
           });
-          
+
           configsToSave = await Promise.all(configPromises);
         }
 
         // Update state
         setAvailableConfigs(configsToSave);
         setUserConfigs(configsToSave);
-        
+
         // Save to localStorage
         saveToUserStorage(STORAGE_KEYS.AVAILABLE_FILE_CONFIGS, user.user_id, configsToSave);
 
@@ -206,7 +206,7 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
 
     setAvailableConfigs(configs);
     setUserConfigs(configs);
-    
+
     // Save to localStorage
     if (user?.user_id) {
       saveToUserStorage(STORAGE_KEYS.AVAILABLE_FILE_CONFIGS, user.user_id, configs);
@@ -217,7 +217,7 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
   const setCurrentConfig = useCallback((configId: number, configName?: string) => {
     // Find the config
     const config = availableConfigs.find(c => c.config_id === configId);
-    
+
     if (config) {
       const configToSave = {
         ...config,
@@ -226,7 +226,7 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
       setCurrentConfigState(configToSave);
       setCurrentConfigId(configId);
       setCurrentConfigName(configToSave.config_name || `Config ${configId}`);
-      
+
       // Save to localStorage
       if (user?.user_id) {
         saveToUserStorage(STORAGE_KEYS.CURRENT_FILE_CONFIG, user.user_id, configToSave);
@@ -240,11 +240,11 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
+
       setCurrentConfigState(basicConfig);
       setCurrentConfigId(configId);
       setCurrentConfigName(configName || `Config ${configId}`);
-      
+
       // Save to localStorage
       if (user?.user_id) {
         saveToUserStorage(STORAGE_KEYS.CURRENT_FILE_CONFIG, user.user_id, basicConfig);
@@ -257,11 +257,11 @@ export function FileConfigContextProvider({ children }: FileConfigContextProvide
     setCurrentConfigState(null);
     setCurrentConfigId(null);
     setCurrentConfigName('');
-    
+
     // Remove from localStorage
     if (user?.user_id) {
       const key = `${STORAGE_KEYS.CURRENT_FILE_CONFIG}_${user.user_id}`;
-      localStorage.removeItem(key);
+      storage.remove(key);
     }
   }, [user?.user_id]);
 

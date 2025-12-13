@@ -78,23 +78,23 @@ export interface DatabaseContextData {
   currentDatabase: DatabaseConfig | null;
   currentDatabaseId: number | null;
   currentDatabaseName: string;
-  
+
   // Available databases
   availableDatabases: DatabaseConfig[];
   userDatabases: DatabaseConfig[];
   mssqlDatabases: MSSQLDatabaseConfig[];
-  
+
   // Loading and error states
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions (called by user-configuration page only)
   setCurrentDatabase: (dbId: number, dbName: string) => void;
   loadDatabasesFromConfig: (databases: DatabaseConfig[]) => void;
   clearCurrentDatabase: () => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  
+
   // Computed values
   hasCurrentDatabase: boolean;
   databaseCount: number;
@@ -134,12 +134,12 @@ export function DatabaseContextProvider({ children }: DatabaseContextProviderPro
   // Memoized computed values
   const hasCurrentDatabase = useMemo(() => !!currentDatabaseId, [currentDatabaseId]);
   const databaseCount = useMemo(() => availableDatabases.length, [availableDatabases]);
-  const activeDatabaseCount = useMemo(() => 
-    availableDatabases.filter(db => db.is_active).length, 
+  const activeDatabaseCount = useMemo(() =>
+    availableDatabases.filter(db => db.is_active).length,
     [availableDatabases]
   );
-  const mssqlDatabaseCount = useMemo(() => 
-    mssqlDatabases.filter(db => db.is_active).length, 
+  const mssqlDatabaseCount = useMemo(() =>
+    mssqlDatabases.filter(db => db.is_active).length,
     [mssqlDatabases]
   );
 
@@ -166,7 +166,7 @@ export function DatabaseContextProvider({ children }: DatabaseContextProviderPro
       if (storedAvailableDBs) {
         setAvailableDatabases(storedAvailableDBs);
         setUserDatabases(storedAvailableDBs);
-        
+
         // Filter MSSQL databases
         const mssqlDBs = storedAvailableDBs.filter((db: DatabaseConfig) => db.db_type === 'mssql') as MSSQLDatabaseConfig[];
         setMSSQLDatabases(mssqlDBs);
@@ -181,16 +181,16 @@ export function DatabaseContextProvider({ children }: DatabaseContextProviderPro
   const loadDatabasesFromConfig = useCallback((databases: DatabaseConfig[]) => {
     setAvailableDatabases(databases);
     setUserDatabases(databases);
-    
+
     // Filter MSSQL databases
     const mssqlDBs = databases.filter(db => db.db_type === 'mssql') as MSSQLDatabaseConfig[];
     setMSSQLDatabases(mssqlDBs);
-    
+
     // Save to localStorage
     saveToUserStorage(STORAGE_KEYS.AVAILABLE_DATABASES, user?.user_id || '', databases);
     saveToUserStorage(STORAGE_KEYS.USER_DATABASES, user?.user_id || '', databases);
     saveToUserStorage(STORAGE_KEYS.MSSQL_DATABASES, user?.user_id || '', mssqlDBs);
-    
+
     // Update current database if we have a basic config that needs updating
     if (currentDatabaseId && currentDatabase && currentDatabase.db_url === '') {
       const realDbConfig = databases.find(db => db.db_id === currentDatabaseId);
@@ -205,12 +205,12 @@ export function DatabaseContextProvider({ children }: DatabaseContextProviderPro
   const setCurrentDatabase = useCallback((dbId: number, dbName: string) => {
     // Find the database config
     const dbConfig = availableDatabases.find(db => db.db_id === dbId);
-    
+
     if (dbConfig) {
       setCurrentDatabaseState(dbConfig);
       setCurrentDatabaseId(dbId);
       setCurrentDatabaseName(dbName);
-      
+
       // Save to localStorage
       saveToUserStorage(STORAGE_KEYS.CURRENT_DATABASE, user?.user_id || '', dbConfig);
     } else {
@@ -226,11 +226,11 @@ export function DatabaseContextProvider({ children }: DatabaseContextProviderPro
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-      
+
       setCurrentDatabaseState(basicConfig);
       setCurrentDatabaseId(dbId);
       setCurrentDatabaseName(dbName);
-      
+
       // Save to localStorage
       saveToUserStorage(STORAGE_KEYS.CURRENT_DATABASE, user?.user_id || '', basicConfig);
     }
@@ -241,10 +241,10 @@ export function DatabaseContextProvider({ children }: DatabaseContextProviderPro
     setCurrentDatabaseState(null);
     setCurrentDatabaseId(null);
     setCurrentDatabaseName('');
-    
+
     // Remove from localStorage
     if (user?.user_id) {
-      localStorage.removeItem(`${STORAGE_KEYS.CURRENT_DATABASE}_${user.user_id}`);
+      storage.remove(`${STORAGE_KEYS.CURRENT_DATABASE}_${user.user_id}`);
     }
   }, [user?.user_id]);
 

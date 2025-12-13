@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Joyride, { CallBackProps, STATUS, Step, Styles } from "react-joyride";
 import { X, Sparkles, Database, FileText, Upload, Table } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { storage } from "@/lib/utils/storage";
 
 interface QueryPageTourProps {
   pageType: "database" | "file";
@@ -82,7 +83,7 @@ const tourStyles: Styles = {
   },
   overlay: {
     backgroundColor: "rgba(0, 0, 0, 0.7)",
-    
+
     pointerEvents: "none",
   },
   beacon: {
@@ -256,14 +257,14 @@ export function QueryPageTour({ pageType, onComplete }: QueryPageTourProps) {
 
   useEffect(() => {
     // Check if user has completed the tour
-    const hasCompletedTour = localStorage.getItem(storageKey);
-    
+    const hasCompletedTour = storage.get(storageKey);
+
     if (!hasCompletedTour) {
       // Small delay to ensure page is fully rendered
       const timer = setTimeout(() => {
         setRunTour(true);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [storageKey]);
@@ -271,7 +272,7 @@ export function QueryPageTour({ pageType, onComplete }: QueryPageTourProps) {
   // Add CSS for green theme button hover effects
   useEffect(() => {
     if (!runTour) return;
-    
+
     const style = document.createElement('style');
     style.id = 'joyride-tour-styles';
     style.textContent = `
@@ -291,7 +292,7 @@ export function QueryPageTour({ pageType, onComplete }: QueryPageTourProps) {
       }
     `;
     document.head.appendChild(style);
-    
+
     return () => {
       const existingStyle = document.getElementById('joyride-tour-styles');
       if (existingStyle) {
@@ -302,16 +303,16 @@ export function QueryPageTour({ pageType, onComplete }: QueryPageTourProps) {
 
   const handleTourCallback = useCallback((data: CallBackProps) => {
     const { status } = data;
-    
+
     if ([STATUS.FINISHED, STATUS.SKIPPED].includes(status)) {
-      localStorage.setItem(storageKey, "true");
+      storage.set(storageKey, "true");
       setRunTour(false);
       onComplete?.();
     }
   }, [storageKey, onComplete]);
 
   const handleSkipTour = useCallback(() => {
-    localStorage.setItem(storageKey, "true");
+    storage.set(storageKey, "true");
     setRunTour(false);
     onComplete?.();
   }, [storageKey, onComplete]);
@@ -347,7 +348,7 @@ export function QueryPageTour({ pageType, onComplete }: QueryPageTourProps) {
         disableOverlayClose={false}
         disableScrolling={false}
       />
-      
+
       {/* Custom Skip Button Overlay */}
       {runTour && (
         <div className="fixed top-4 right-4 z-[10002]">

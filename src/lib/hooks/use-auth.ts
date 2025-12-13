@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ServiceRegistry } from '@/lib/api';
-import { clearAllEasyQueryStorage } from '@/lib/utils/storage';
-import type { 
-  LoginRequest, 
+import { clearAllEasyQueryStorage, storage } from '@/lib/utils/storage';
+import type {
+  LoginRequest,
   TokenResponse,
 } from '@/lib/api';
 
@@ -42,8 +42,8 @@ export function useAuth() {
   // Clear auth data from localStorage
   const clearAuthStorage = useCallback(() => {
     try {
-      localStorage.removeItem('auth_tokens');
-      localStorage.removeItem('auth_user');
+      storage.remove('auth_tokens');
+      storage.remove('auth_user');
     } catch (error) {
       console.error('Failed to clear auth data from localStorage:', error);
     }
@@ -52,8 +52,8 @@ export function useAuth() {
   // Save auth data to localStorage
   const saveAuthToStorage = useCallback((authTokens: AuthTokens, userData: any) => {
     try {
-      localStorage.setItem('auth_tokens', JSON.stringify(authTokens));
-      localStorage.setItem('auth_user', JSON.stringify(userData));
+      storage.set('auth_tokens', JSON.stringify(authTokens));
+      storage.set('auth_user', JSON.stringify(userData));
     } catch (error) {
       console.error('Failed to save auth data to localStorage:', error);
     }
@@ -63,13 +63,13 @@ export function useAuth() {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        const storedTokens = localStorage.getItem('auth_tokens');
-        const storedUser = localStorage.getItem('auth_user');
-        
+        const storedTokens = storage.get('auth_tokens');
+        const storedUser = storage.get('auth_user');
+
         if (storedTokens && storedUser) {
           const parsedTokens: AuthTokens = JSON.parse(storedTokens);
           const parsedUser: any = JSON.parse(storedUser);
-          
+
           // Check if token is still valid
           if (!ServiceRegistry.auth.isTokenExpired(parsedTokens.accessToken)) {
             setTokens(parsedTokens);
@@ -96,11 +96,11 @@ export function useAuth() {
   const login = useCallback(async (credentials: LoginRequest): Promise<void> => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Login and get tokens
       const authResponse = await ServiceRegistry.auth.login(credentials);
-      
+
       if (!authResponse.success) {
         // Normalize invalid credential errors for the UI
         const message = authResponse.error && /unauthorized|invalid|credentials|401/i.test(authResponse.error)
@@ -108,7 +108,7 @@ export function useAuth() {
           : (authResponse.error || 'Login failed');
         throw new Error(message);
       }
-      
+
       const tokenData: TokenResponse = authResponse.data;
       const authTokens: AuthTokens = {
         accessToken: tokenData.access_token,
@@ -122,14 +122,14 @@ export function useAuth() {
       // Store tokens immediately so subsequent requests include Authorization header
       setTokens(authTokens);
       try {
-        localStorage.setItem('auth_tokens', JSON.stringify(authTokens));
+        storage.set('auth_tokens', JSON.stringify(authTokens));
       } catch (storageError) {
         console.warn('Failed to persist auth tokens:', storageError);
       }
 
       // Get current user info (requires Authorization header)
       const userResponse = await ServiceRegistry.auth.getCurrentUser();
-      
+
       if (!userResponse.success) {
         throw new Error(userResponse.error || 'Failed to get user info');
       }
@@ -139,7 +139,7 @@ export function useAuth() {
 
       // Save full auth state to storage
       saveAuthToStorage(authTokens, userResponse.data);
-      
+
     } catch (err: any) {
       const errorMessage = err.message || 'Login failed';
       setError(errorMessage);
@@ -195,13 +195,13 @@ export function useAuth() {
     if (!tokens?.userId) {
       throw new Error('No user ID available');
     }
-    
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await ServiceRegistry.auth.changePassword(tokens.userId, oldPassword, newPassword);
-      
+
       if (!response.success) {
         throw new Error(response.error || 'Password change failed');
       }
@@ -228,7 +228,7 @@ export function useAuth() {
 
     try {
       const response = await ServiceRegistry.auth.getCurrentUser();
-      
+
       if (!response.success) {
         throw new Error(response.error || 'Failed to refresh profile');
       }
@@ -239,7 +239,7 @@ export function useAuth() {
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to refresh profile';
       setError(errorMessage);
-      
+
       // If token is invalid, logout
       if (err.statusCode === 401) {
         await logout();

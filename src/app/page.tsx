@@ -7,6 +7,7 @@ import { useAuthContext } from "@/components/providers/AuthContextProvider";
 import { useRouter } from "next/navigation";
 import { PageLayout } from "@/components/layout/PageLayout";
 import { EasyQueryBrandLoader } from "@/components/ui/loading";
+import { storage } from "@/lib/utils/storage";
 
 function DashboardPageContent() {
   const [showOpeningAnimation, setShowOpeningAnimation] = useState(false);
@@ -16,9 +17,7 @@ function DashboardPageContent() {
 
   // Initialize component
   useEffect(() => {
-    const hasSeen =
-      typeof window !== "undefined" &&
-      localStorage.getItem("welcome-animation-shown");
+    const hasSeen = storage.get("welcome-animation-shown");
     if (!hasSeen) {
       setShowOpeningAnimation(true);
     }
@@ -26,9 +25,7 @@ function DashboardPageContent() {
 
   const handleOpeningComplete = () => {
     setShowOpeningAnimation(false);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("welcome-animation-shown", "true");
-    }
+    storage.set("welcome-animation-shown", "true");
   };
 
   return (

@@ -2,6 +2,7 @@ import { ApiRequestConfig, ApiResponse, ApiError } from "@/types/api";
 import { NetworkError } from "../types/error";
 import { logger } from '@/lib/utils/logger';
 import { apiCache } from './cache/simple-cache';
+import { storage } from '@/lib/utils/storage';
 
 const baseUrl =
   process.env.NEXT_PUBLIC_API_BASE_URL || "https://176.9.16.194:8200";
@@ -495,10 +496,11 @@ export class ApiClient {
 export const apiClient = new ApiClient(baseUrl);
 
 // Add authentication interceptor to include auth token in all requests
+// Add authentication interceptor to include auth token in all requests
 apiClient.addRequestInterceptor((config: ApiRequestConfig) => {
-  // Get auth token from localStorage
+  // Get auth token from storage (safe for SSR)
   try {
-    const storedTokens = localStorage.getItem('auth_tokens');
+    const storedTokens = storage.get('auth_tokens');
     if (storedTokens) {
       const tokens = JSON.parse(storedTokens);
       if (tokens.accessToken) {
