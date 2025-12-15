@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { PageLayout, PageHeader } from "@/components/layout/PageLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cpu, Plus } from "lucide-react";
+import { Cpu, Plus, ArrowLeft } from "lucide-react";
 import { vectorDBService, VectorDBConfig } from "@/lib/api/services/vector-db-service";
 import { adminService } from "@/lib/api/services/admin-service";
 import { useRouter } from "next/navigation";
@@ -217,6 +217,16 @@ export default function VectorDBManagementPage() {
 
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/admin")}
+          className="text-white hover:text-green-400 hover:bg-white/5"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Admin Dashboard
+        </Button>
+      </div>
       <PageHeader
         title="Vector DB Management"
         description="Manage vector database configurations and user access. Organize documents using folders."

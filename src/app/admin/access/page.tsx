@@ -17,7 +17,8 @@ import {
   Check,
   X,
   User,
-  XIcon
+  XIcon,
+  ArrowLeft
 } from "lucide-react";
 import { adminService } from "@/lib/api/services/admin-service";
 import { vectorDBService, VectorDBConfig } from "@/lib/api/services/vector-db-service";
@@ -287,6 +288,16 @@ export default function AccessManagementPage() {
 
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/admin")}
+          className="text-white hover:text-green-400 hover:bg-white/5"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Admin Dashboard
+        </Button>
+      </div>
       <PageHeader 
         title="Access Management" 
         description="Manage user access to databases and vector configurations"

@@ -15,7 +15,8 @@ import {
   Key,
   Database,
   RefreshCw,
-  XIcon
+  XIcon,
+  ArrowLeft
 } from "lucide-react";
 import { adminService } from "@/lib/api/services/admin-service";
 import { useRouter } from "next/navigation";
@@ -249,6 +250,16 @@ export default function UserManagementPage() {
 
   return (
     <PageLayout background={["frame", "gridframe"]} maxWidth="7xl" className="min-h-screen py-6">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => router.push("/admin")}
+          className="text-white hover:text-green-400 hover:bg-white/5"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Admin Dashboard
+        </Button>
+      </div>
       <PageHeader 
         title="User Management" 
         description="Create users, manage roles and passwords"

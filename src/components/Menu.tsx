@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useUIStore } from "@/store/uiStore";
 import { useAuthContext } from "@/components/providers/AuthContextProvider";
-import { Shield, LayoutDashboard, Database, FileText, Table2 } from "lucide-react";
+import { Shield, LayoutDashboard, Database, FileText, Table2, BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Menu() {
@@ -33,6 +33,11 @@ export default function Menu() {
             name: "Table Management",
             path: "/table-management",
             iconComponent: Table2,
+          },
+          {
+            name: "Report Generation",
+            path: "/report-generation",
+            iconComponent: BarChart3,
           },
         ]
       : []),

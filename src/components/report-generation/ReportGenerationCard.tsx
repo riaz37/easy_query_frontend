@@ -1,0 +1,66 @@
+"use client";
+
+import React from "react";
+import { ReportGenerationHeader } from "./ReportGenerationHeader";
+import { QueryForm } from "@/components/shared/QueryForm";
+import { QueryProgress } from "@/components/shared/QueryProgress";
+
+interface ReportGenerationCardProps {
+  query: string;
+  setQuery: (query: string) => void;
+  isExecuting: boolean;
+  onExecuteClick: (model?: string) => void;
+  hasDatabase: boolean;
+  userId?: string;
+  className?: string;
+  stopTypewriter?: boolean;
+  progress?: number;
+  currentStep?: string;
+  databaseSelector?: React.ReactNode;
+}
+
+export function ReportGenerationCard({
+  query,
+  setQuery,
+  isExecuting,
+  onExecuteClick,
+  hasDatabase,
+  className = "",
+  stopTypewriter = false,
+  databaseSelector,
+  ...props
+}: ReportGenerationCardProps) {
+  return (
+    <div
+      className={`px-2 py-2 flex flex-col h-full flex-1 query-card-gradient ${className}`}
+    >
+      <ReportGenerationHeader />
+      
+      <div className="relative z-10">
+        <QueryForm
+          query={query}
+          setQuery={setQuery}
+          isExecuting={isExecuting}
+          onExecuteClick={onExecuteClick}
+          placeholder=""
+          placeholderType="database"
+          buttonText="Ask"
+          showClearButton={true}
+          disabled={!hasDatabase}
+          enableTypewriter={true}
+          stopTypewriter={stopTypewriter}
+          showModelSelector={true}
+          databaseSelector={databaseSelector}
+        />
+        {isExecuting && (
+          <div className="mt-4 px-2">
+            <QueryProgress 
+              progress={props.progress || 0} 
+              currentStep={props.currentStep || "Processing..."} 
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
